@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CS180 Project 0 — Becoming Friends with Your Camera</title>
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --surface: #ffffff;
+      --ink: #1c1b1a;
+      --muted: #6b6864;
+      --line: #e7e4df;
+      --accent: #1d4ed8;
+      --accent-soft: #eef2ff;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+      --radius: 14px;
+      --maxw: 980px;
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #14130f;
+        --surface: #1c1b18;
+        --ink: #ece9e3;
+        --muted: #a09c94;
+        --line: #302e29;
+        --accent: #8bb0ff;
+        --accent-soft: #1e2333;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.5);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); }
+
+    /* ---------- Hero ---------- */
+    header.hero {
+      padding: 5.5rem 1.5rem 3rem;
+      text-align: center;
+      background:
+        radial-gradient(1200px 400px at 50% -120px, var(--accent-soft), transparent 70%);
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      font-size: .8rem;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+      margin: 0 0 1rem;
+    }
+    header.hero h1 {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      line-height: 1.1;
+      margin: 0 auto .8rem;
+      max-width: 16ch;
+      letter-spacing: -.01em;
+    }
+    header.hero p.lede {
+      color: var(--muted);
+      font-size: 1.1rem;
+      max-width: 46ch;
+      margin: 0 auto 1.6rem;
+    }
+    .byline {
+      font-size: .95rem;
+      color: var(--muted);
+    }
+    .byline strong { color: var(--ink); font-weight: 600; }
+
+    nav.toc {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: .5rem;
+      margin-top: 2rem;
+    }
+    nav.toc a {
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 500;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: .5rem 1rem;
+      border-radius: 999px;
+      transition: border-color .2s, transform .2s;
+    }
+    nav.toc a:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+    /* ---------- Layout ---------- */
+    main { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem; }
+    section { padding: 4rem 0; border-bottom: 1px solid var(--line); }
+    section:last-child { border-bottom: none; }
+
+    .sec-head { max-width: 62ch; margin-bottom: 2rem; }
+    .sec-num {
+      display: inline-block;
+      font-family: var(--serif);
+      font-size: .95rem;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: .4rem;
+    }
+    h2 {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+      margin: 0 0 .6rem;
+      letter-spacing: -.01em;
+    }
+    .sec-head p { color: var(--muted); margin: 0; font-size: 1.05rem; }
+
+    /* ---------- Comparison figures ---------- */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 640px) { .compare { grid-template-columns: 1fr; } }
+    figure {
+      margin: 0;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    figure img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      background: var(--line);
+    }
+    figcaption {
+      padding: .9rem 1.1rem 1.1rem;
+      font-size: .92rem;
+      color: var(--muted);
+    }
+    figcaption .tag {
+      display: inline-block;
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: .2rem .55rem;
+      border-radius: 6px;
+      margin-bottom: .5rem;
+    }
+    figcaption strong { color: var(--ink); }
+
+    /* ---------- Reflection callout ---------- */
+    .reflect {
+      margin-top: 2rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 1.4rem 1.6rem;
+      box-shadow: var(--shadow);
+    }
+    .reflect h3 {
+      margin: 0 0 .5rem;
+      font-size: .82rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .reflect p { margin: 0 0 .8rem; }
+    .reflect p:last-child { margin-bottom: 0; }
+
+    /* ---------- GIF block ---------- */
+    .gif-wrap {
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 2rem;
+      align-items: center;
+    }
+    @media (max-width: 720px) { .gif-wrap { grid-template-columns: 1fr; } }
+    .gif-wrap figure img { aspect-ratio: 4 / 3; }
+    .frames {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: .6rem;
+      margin-top: 1.5rem;
+    }
+    .frames img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+    }
+    .frames-label {
+      font-size: .82rem;
+      color: var(--muted);
+      margin-top: .7rem;
+      text-align: center;
+    }
+
+    /* ---------- Footer ---------- */
+    footer {
+      text-align: center;
+      padding: 3rem 1.5rem 4rem;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+    footer a { text-decoration: none; }
+    .back {
+      display: inline-block;
+      margin-bottom: 1rem;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <p class="eyebrow">CS180 · Computer Vision · Project 0</p>
+    <h1>Becoming Friends with Your Camera</h1>
+    <p class="lede">Three small experiments in how distance, zoom, and perspective quietly reshape what the lens sees.</p>
+    <p class="byline">By <strong>Yuxiang Liu</strong> · UC Berkeley, Fall 2026</p>
+    <nav class="toc">
+      <a href="#part1">1 · Selfie Comparison</a>
+      <a href="#part2">2 · Perspective Compression</a>
+      <a href="#part3">3 · Dolly Zoom</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ======================= PART 1 ======================= -->
+    <section id="part1">
+      <div class="sec-head">
+        <span class="sec-num">Part 1</span>
+        <h2>The Selfie Comparison</h2>
+        <p>Two portraits of the same face, framed to the same size — one shot up close, the other from several feet back with the camera zoomed in to compensate.</p>
+      </div>
+
+      <div class="compare">
+        <figure>
+          <img src="../media/images/proj0/web/part1_close.jpg" alt="Close-up selfie taken at arm's length">
+          <figcaption>
+            <span class="tag">Close · ~30 cm</span>
+            <strong>Up close.</strong> Shot at arm's length. The nose and forehead balloon forward, the cheeks round out, and the face feels bulged toward the camera.
+          </figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj0/web/part1_far.jpg" alt="Portrait taken from several feet away with zoom">
+          <figcaption>
+            <span class="tag">Far + zoom · ~2 m</span>
+            <strong>Backed up and zoomed.</strong> Same face size, but the features sit in natural proportion — a flatter, more flattering portrait.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="reflect">
+        <h3>Why the second one looks better</h3>
+        <p>When the camera is only a few centimeters away, the tip of the nose is dramatically closer to the lens than the ears are. Because apparent size falls off with distance, that small difference gets exaggerated: the nose and forehead are magnified relative to the rest of the face, producing the classic "selfie bulge."</p>
+        <p>Stepping back to two meters makes the nose-to-lens and ears-to-lens distances nearly equal, so every feature is magnified by almost the same amount. Zooming in restores the face to the same size in frame, but the proportions are now true to life — which is exactly why portrait photographers shoot from a distance with a longer lens.</p>
+      </div>
+    </section>
+
+    <!-- ======================= PART 2 ======================= -->
+    <section id="part2">
+      <div class="sec-head">
+        <span class="sec-num">Part 2</span>
+        <h2>Architectural Perspective Compression</h2>
+        <p>The same lamp post and concrete façade at Blum Hall, captured two ways: far away with heavy zoom, then up close with none. The building stays roughly the same size — but the sense of depth does not.</p>
+      </div>
+
+      <div class="compare">
+        <figure>
+          <img src="../media/images/proj0/web/part2_far.jpg" alt="Building photographed from far away with zoom, appearing compressed">
+          <figcaption>
+            <span class="tag">Far + zoom</span>
+            <strong>Flattened.</strong> The lamp post, wall, and vines behind it all seem stacked onto one plane — the scene reads compressed and shallow.
+          </figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj0/web/part2_close.jpg" alt="Building photographed up close without zoom, showing more depth">
+          <figcaption>
+            <span class="tag">Close · no zoom</span>
+            <strong>Deep.</strong> The foreground rushes out, the walls angle away, and the far building recedes — you can feel how far back the scene runs.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="reflect">
+        <h3>Why the first one looks compressed</h3>
+        <p>Perspective — how quickly things shrink with distance — is set entirely by <em>where the camera stands</em>, not by the zoom. From far away, the front of the scene and the back of the scene are both a long way off, so the ratio of their distances is close to 1:1. Near and far objects shrink by almost the same amount, and depth collapses; zooming in just crops into that already-flattened view.</p>
+        <p>Standing close flips this. Now the foreground is only a fraction of the distance to the background, so near objects loom large and far objects fall away sharply. That strong distance ratio is what gives the second photo its palpable depth.</p>
+      </div>
+    </section>
+
+    <!-- ======================= PART 3 ======================= -->
+    <section id="part3">
+      <div class="sec-head">
+        <span class="sec-num">Part 3</span>
+        <h2>The Dolly Zoom</h2>
+        <p>The cinematic "Vertigo" effect: walk the camera backward while zooming in, keeping the subject the same size. The subject holds still in the frame while the world behind it seems to swell and shift.</p>
+      </div>
+
+      <div class="gif-wrap">
+        <figure>
+          <img src="../media/images/proj0/web/part3_dolly.gif" alt="Animated dolly zoom of a napkin dispenser">
+          <figcaption>
+            <span class="tag">Animated · 4 frames</span>
+            <strong>Napkin dispenser, held constant.</strong> The dispenser stays roughly the same size, but the white brick wall and background rush inward as the focal length climbs.
+          </figcaption>
+        </figure>
+        <div class="reflect" style="margin-top:0;">
+          <h3>What's happening</h3>
+          <p>Moving backward stretches out the perspective (the background falls away and shrinks); zooming in magnifies everything to hold the subject at a fixed size. The two effects cancel <em>on the subject</em> but not on the background.</p>
+          <p>The result is that eerie, physically impossible sense of the scene warping around a stationary object — the same trick Hitchcock used to make a stairwell yawn open in <em>Vertigo</em>.</p>
+        </div>
+      </div>
+
+      <div class="frames">
+        <img src="../media/images/proj0/web/part3_1.jpg" alt="Dolly zoom frame 1">
+        <img src="../media/images/proj0/web/part3_2.jpg" alt="Dolly zoom frame 2">
+        <img src="../media/images/proj0/web/part3_3.jpg" alt="Dolly zoom frame 3">
+        <img src="../media/images/proj0/web/part3_4.jpg" alt="Dolly zoom frame 4">
+      </div>
+      <p class="frames-label">The four source stills — camera stepping back and focal length increasing left to right.</p>
+    </section>
+  </main>
+
+  <footer>
+    <a class="back" href="../index.html">← Back to portfolio</a>
+    <p>CS180: Intro to Computer Vision &amp; Computational Photography · Fall 2026</p>
+  </footer>
+</body>
+</html>
