@@ -308,7 +308,7 @@
   <header class="hero">
     <p class="eyebrow">CS180 · Computer Vision · Project 1</p>
     <h1>Colorizing the Prokudin-Gorskii Collection</h1>
-    <p class="lede">Reassembling color photographs from a century-old set of red, green, and blue glass-plate exposures — by teaching a computer to slide the three layers back into register.</p>
+    <p class="lede">Rebuilding color photos from a 100-year-old set of red, green, and blue black-and-white shots — by lining the three layers back up automatically.</p>
     <p class="byline">By <strong>Yuxiang Liu</strong> · UC Berkeley, Fall 2026</p>
     <nav class="toc">
       <a href="#method">Method</a>
@@ -330,14 +330,14 @@
       </div>
 
       <div class="prose">
-        <p>The Library of Congress digitized the surviving plates. Each scan is a vertical strip holding the three brightness records stacked top-to-bottom in <strong>blue, green, red</strong> order. Dropping them straight onto the R/G/B channels of a digital image gives a badly ghosted picture, because the camera shifted slightly between the three exposures. The whole job is to find, for each of the green and red plates, the <em>(dy, dx)</em> shift that snaps it back on top of the blue reference — then stack the aligned plates into one RGB image.</p>
+        <p>Each scan is a tall strip with the three shots stacked top to bottom, in <strong>blue, green, red</strong> order. If you stack them straight into a color image, you get a blurry, ghosted mess — the camera moved a little between each shot. The job is simple to state: for the green and red layers, find how far to slide them — <em>(dy, dx)</em>, meaning down and right — so they line up with the blue layer. Then stack the three lined-up layers into one color photo.</p>
       </div>
 
       <div class="pipeline">
         <div class="step">
           <span class="n">01</span>
           <h4>Split the strip</h4>
-          <p>Cut the scan into three equal horizontal thirds — the B, G, and R exposures.</p>
+          <p>Cut the strip into three equal parts — the blue, green, and red shots.</p>
           <div class="plate-stack"><span class="pb"></span></div>
           <div class="plate-stack"><span class="pg"></span></div>
           <div class="plate-stack"><span class="pr"></span></div>
@@ -345,25 +345,25 @@
         <div class="step">
           <span class="n">02</span>
           <h4>Score a shift</h4>
-          <p>Slide a plate by <code>(dy, dx)</code> and score the overlap with <strong>normalized cross-correlation</strong>, ignoring the noisy border.</p>
+          <p>Slide a layer by <code>(dy, dx)</code> and score how well it lines up with <strong>NCC</strong>, ignoring the messy border.</p>
         </div>
         <div class="step">
           <span class="n">03</span>
           <h4>Search coarse&#8202;→&#8202;fine</h4>
-          <p>An image pyramid finds big shifts on a tiny copy, then refines them level by level on the full plate.</p>
+          <p>Find the big shift on a shrunk-down copy, then fine-tune it as the image grows back to full size.</p>
         </div>
         <div class="step">
           <span class="n">04</span>
           <h4>Stack &amp; trim</h4>
-          <p>Roll G and R by their best shifts, stack into RGB, and crop the ragged edges away.</p>
+          <p>Slide green and red by their best shifts, stack into a color image, and trim the ragged edges.</p>
           <div class="plate-stack"><span class="pr"></span><span class="pg"></span><span class="pb"></span></div>
         </div>
       </div>
 
       <div class="callout">
-        <h3>The matching metric</h3>
-        <p>Candidate shifts are ranked by <strong>normalized cross-correlation (NCC)</strong> — each plate is mean-subtracted and normalized to a unit vector, and the score is their dot product. Unlike a raw L2 difference, NCC compares <em>structure</em> rather than absolute brightness, so it doesn't get fooled when one filter simply let in more light than another.</p>
-        <p>Before scoring, I crop 15% off every side. The plate edges are full of black scanner borders and the fringe where the three exposures don't overlap — matching on those would reward aligning the junk instead of the picture.</p>
+        <h3>How I score a match</h3>
+        <p>To decide which slide is best, I measure how well two layers line up with <strong>normalized cross-correlation (NCC)</strong>. In plain terms, it checks whether the light and dark areas fall in the same places, while ignoring the fact that one layer might be brighter overall than another. A simple pixel-by-pixel difference would wrongly favor whichever layer happens to be a similar brightness; NCC looks at the pattern instead.</p>
+        <p>Before scoring, I chop 15% off each edge. The edges are full of black scanner borders and messy fringe where the layers don't overlap — leaving them in would make the search line up the junk instead of the actual picture.</p>
       </div>
     </section>
 
@@ -372,7 +372,7 @@
       <div class="sec-head">
         <span class="sec-num">Part 1</span>
         <h2>Single-scale exhaustive search</h2>
-        <p>For the small JPEG plates, the shift is only a handful of pixels, so a brute-force search over a <code>[&minus;15, 15]</code> window in both directions is enough. Every candidate shift is scored with NCC and the best one wins.</p>
+        <p>The small JPEG scans only need to move a few pixels, so I just try every shift from <code>&minus;15</code> to <code>+15</code> in each direction, score each one with NCC, and keep the best.</p>
       </div>
 
       <div class="grid three">
@@ -408,7 +408,7 @@
         </figure>
       </div>
       <div class="prose" style="margin-top:1.5rem">
-        <p>Each label reads <code>(dy, dx)</code> — vertical then horizontal shift applied to that plate. The red plate consistently needs about twice the shift of green, which makes sense: red sits farthest from blue on the original strip, so it drifted the most between exposures.</p>
+        <p>Each label is <code>(dy, dx)</code> — how far down and right that layer was slid. Red always needs about twice the shift of green, which makes sense: red sits farthest from blue on the strip, so it drifted the most.</p>
       </div>
     </section>
 
@@ -417,7 +417,7 @@
       <div class="sec-head">
         <span class="sec-num">Part 2</span>
         <h2>Coarse-to-fine pyramid alignment</h2>
-        <p>The full-resolution <code>.tif</code> plates are ~9,000&nbsp;px tall, and their true shifts run to well over a hundred pixels — far outside any window a single brute-force pass could afford. A recursive image pyramid solves it: estimate the shift on a heavily downsampled copy, double it, then refine within a small window at each finer level.</p>
+        <p>The full-size <code>.tif</code> scans are about 9,000&nbsp;pixels tall, and the layers can be off by well over a hundred pixels — too far to check every shift directly. So I shrink each layer way down, find the rough shift on the tiny version, double it, and repeat at each larger size, fine-tuning a little each step. This coarse-to-fine <strong>image pyramid</strong> finds a big shift cheaply, then sharpens it.</p>
       </div>
 
       <div class="grid gallery" id="gallery">
@@ -500,7 +500,7 @@
       <div class="sec-head">
         <span class="sec-num">My picks</span>
         <h2>Three plates of my own</h2>
-        <p>Pulled from the Library of Congress collection and run through the same pyramid pipeline. One of them, <em>family</em>, forced an interesting choice about <a href="#bells">what to align on</a> — and is discussed further in <a href="#fail">When It Breaks</a>.</p>
+        <p>Three more photos I picked from the Library of Congress archive, run through the same steps. One of them, <em>family</em>, made me choose between two ways of lining up the layers — see <a href="#bells">Bells &amp; Whistles</a>.</p>
       </div>
 
       <div class="grid three">
@@ -523,32 +523,47 @@
     <section id="bells">
       <div class="sec-head">
         <span class="sec-num">Bells &amp; whistles</span>
-        <h2>Two things that made it work</h2>
-        <p>Beyond plain translation search, two design choices did most of the heavy lifting on the hard plates.</p>
+        <h2>Three tricks, shown by turning them off</h2>
+        <p>Three choices made the hard photos work. The clearest way to see why each one matters is to switch it off and watch the photo fall apart. Below is what breaks <em>without</em> each trick — the correct versions are up in the galleries above.</p>
       </div>
 
       <div class="bw">
         <div class="bw-item">
           <figure>
-            <img src="../media/images/proj1/web/emir.jpg" alt="The emir plate, cleanly aligned" loading="lazy">
-            <figcaption><span class="name">emir</span> — the classic hard case, cleanly registered.</figcaption>
+            <img src="../media/images/proj1/web/emir_fail_nograd.jpg" alt="The emir, badly ghosted when aligned on raw brightness" loading="lazy">
+            <figcaption><span class="name">emir</span> — matching brightness instead of edges: red lands 782&nbsp;px off, leaving a red ghost.</figcaption>
           </figure>
           <div class="txt">
-            <span class="tag">Aligning on gradients, not pixels</span>
-            <h3>Match edges, not brightness</h3>
-            <p>The <em>emir</em> plate is the textbook failure of raw-pixel alignment: his brilliant blue robe is bright in the blue exposure but nearly black in red, so matching on intensity pulls the plates apart. Instead of the raw plates, I align their <strong>gradient magnitude</strong> (a Sobel edge map). Edges fall in the same place regardless of which filter was brightest, so the match keys on shared structure — collars, seams, the doorframe — and the emir snaps into register. It's the default for every plate but one: on the carpet-heavy <em>family</em> scene the repeating edges backfire, which is its own story in <a href="#fail">When It Breaks</a>.</p>
+            <span class="tag">Trick 1 · Match edges, not brightness</span>
+            <h3>Why not just match brightness?</h3>
+            <p>The obvious idea is to slide the layers until their bright and dark areas line up. But the emir's robe is bright in the blue shot and nearly black in the red shot, so matching brightness yanks the red layer far away — here it lands 782 pixels off, leaving a red ghost of him on the left.</p>
+            <p><strong>The fix:</strong> match <em>edges</em> instead — the outlines where things change from light to dark. An edge sits in the same spot no matter which layer is brighter, so the emir snaps right into place.</p>
           </div>
         </div>
 
         <div class="bw-item">
           <figure>
-            <img src="../media/images/proj1/web/church.jpg" alt="The church plate with trimmed borders" loading="lazy">
-            <figcaption><span class="name">church</span> — clean edges after border handling.</figcaption>
+            <img src="../media/images/proj1/web/family_fail_grad.jpg" alt="The family photo smeared with red when aligned on edges" loading="lazy">
+            <figcaption><span class="name">family</span> — matching edges here: red slides 571&nbsp;px off, smearing red across the room.</figcaption>
           </figure>
           <div class="txt">
-            <span class="tag">Border handling</span>
-            <h3>Ignore the junk, then trim it</h3>
-            <p>Borders hurt twice. During <em>scoring</em>, the black scanner frame and the non-overlapping fringe are the highest-contrast thing in the plate, so I crop 15% off each side before computing NCC — otherwise the search happily aligns the borders instead of the photo. After <em>compositing</em>, the outer 8% is trimmed from the finished RGB image so the coloured fringe left by the shifts doesn't frame every picture.</p>
+            <span class="tag">Trick 2 · Know when to switch back</span>
+            <h3>Edges aren't always the answer</h3>
+            <p>Matching edges usually helps — but not here. This room is wrapped in carpets with the same diamond pattern repeating everywhere, and those edges look identical no matter how far you slide sideways. Matching edges sends the red layer 571 pixels off, smearing red across the whole photo.</p>
+            <p><strong>The fix:</strong> for this one photo I switch back to matching brightness, which the repeating pattern doesn't fool, and it lines up correctly (shown in <a href="#picks">My Picks</a>). The lesson: edges are a tool to reach for, not a rule to always follow.</p>
+          </div>
+        </div>
+
+        <div class="bw-item">
+          <figure>
+            <img src="../media/images/proj1/web/church_fail_nocrop.jpg" alt="The church with red and cyan fringes when the border isn't ignored" loading="lazy">
+            <figcaption><span class="name">church</span> — keeping the border while scoring: the search locks onto the frame and every roofline fringes.</figcaption>
+          </figure>
+          <div class="txt">
+            <span class="tag">Trick 3 · Ignore the border</span>
+            <h3>Don't let the frame win</h3>
+            <p>Every scan has a black border and ragged edges where the layers don't overlap — and those edges are the sharpest thing in the whole picture. If I leave them in, the search lines up the <em>borders</em> instead of the church, and the result gets red and cyan fringes along every roofline and reflection.</p>
+            <p><strong>The fix:</strong> ignore the outer 15% of each layer while scoring, so the search pays attention to the actual scene. (I also trim the ragged 8% off the final photo, purely to tidy the edges.)</p>
           </div>
         </div>
       </div>
@@ -559,36 +574,34 @@
       <div class="sec-head">
         <span class="sec-num">Honesty</span>
         <h2>When it breaks</h2>
-        <p>All seventeen plates end up correctly registered — but one of them only after switching the thing I aligned on, and a couple carry limits that no shift can repair.</p>
+        <p>All seventeen photos end up lined up correctly. But two of them still aren't perfect — and the reason has nothing to do with the sliding. These are limits no amount of alignment can fix.</p>
       </div>
 
       <div class="grid two">
         <figure>
-          <img src="../media/images/proj1/web/family.jpg" alt="Family portrait, correctly aligned on raw pixels" loading="lazy">
+          <img src="../media/images/proj1/web/family.jpg" alt="Family portrait, aligned, with a faint halo on the standing man" loading="lazy">
           <figcaption>
-            <span class="name">family — the exception to the gradient rule</span>
-            Gradient alignment throws the red plate 571&nbsp;px sideways; on raw pixels it lands correctly. The soft halo on the standing man is his own motion between exposures, not a bad shift.
+            <span class="name">family — someone moved</span>
+            The layers are lined up, but look at the standing man on the right: a faint color halo traces his outline. He shifted between the three shots, and no single slide can catch all of him at once.
           </figcaption>
         </figure>
         <figure>
           <img src="../media/images/proj1/web/church.jpg" alt="Church with a magenta color cast" loading="lazy">
           <figcaption>
-            <span class="name">church — geometry right, colour off</span>
-            The plates are perfectly registered, but the sky and water carry a magenta cast — a colour-balance issue, not an alignment one.
+            <span class="name">church — lined up, but tinted</span>
+            The layers are perfectly aligned, yet the sky and water lean magenta. That's a color-balance issue, not an alignment one.
           </figcaption>
         </figure>
       </div>
 
-      <div class="callout warn">
-        <h3>Why <em>family</em> is the one plate I don't align on gradients</h3>
-        <p>Gradient features rescue most hard plates, but they sabotage this one. Aligning <em>family</em>'s edge maps sends the red plate to <code>(+37, +571)</code> — a false match: the scene is wall-to-wall carpet with dense, near-periodic diamond patterns, and in the edge map those repeats correlate strongly at many horizontal offsets. The coarse pyramid level locks onto the wrong repeat, and the finer levels only polish a shift that was already hundreds of pixels off.</p>
-        <p>Feeding the <strong>raw plates</strong> to the same pyramid fixes it: the smooth tonal variation across the carpets is far less self-similar than their edges, so red settles at <code>(+86, &minus;43)</code> — in line with green's <code>(+47, &minus;12)</code> and visibly correct. It's a clean illustration that gradient features are a tool, not a default: they win when brightness disagrees between filters (see <em>emir</em>), and lose when structure repeats.</p>
-        <p>The residual colour fringing on the standing man survives either way. He shifted between the three exposures, so no single global translation can bring his edges into register — that's subject motion, a limitation of the capture, not the algorithm.</p>
+      <div class="callout">
+        <h3>People who moved</h3>
+        <p>Sliding a whole layer works only if the scene held still. In <em>family</em>, the standing man moved a little between the red, green, and blue shots, so his edges never fully overlap no matter how I slide the layers. The rest of the photo — the seated people, the carpets — is sharp; only the parts that moved show a color halo. Fixing this would take warping different parts of the image by different amounts, which is beyond simple sliding.</p>
       </div>
 
       <div class="callout">
-        <h3>The colour cast on <em>church</em></h3>
-        <p>Alignment only decides <em>geometry</em>. The three plates were exposed and digitized with different sensitivities, so even a perfectly registered stack can lean toward one hue. A per-channel white-balance or histogram stretch — an optional extension I didn't implement — would neutralize the magenta without touching the shifts.</p>
+        <h3>The magenta tint on <em>church</em></h3>
+        <p>Sliding the layers only fixes their <em>position</em>, not their <em>color</em>. The three shots were taken and scanned with slightly different sensitivities, so even a perfectly aligned stack can lean toward one color. Stretching each layer's brightness to a common range — a white-balance step I didn't add — would remove the tint without changing the alignment.</p>
       </div>
     </section>
   </main>
