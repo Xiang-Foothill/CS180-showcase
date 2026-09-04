@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Colorizing the Prokudin-Gorskii Collection</title>
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --surface: #ffffff;
+      --ink: #1c1b1a;
+      --muted: #6b6864;
+      --line: #e7e4df;
+      --accent: #1d4ed8;
+      --accent-soft: #eef2ff;
+      /* channel accents, borrowed from the plates themselves */
+      --chan-r: #c0392b;
+      --chan-g: #1e8b4e;
+      --chan-b: #2563c9;
+      --warn-soft: #fbeaea;
+      --warn-ink: #a23b2d;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+      --radius: 14px;
+      --maxw: 1040px;
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: "SF Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #14130f;
+        --surface: #1c1b18;
+        --ink: #ece9e3;
+        --muted: #a09c94;
+        --line: #302e29;
+        --accent: #8bb0ff;
+        --accent-soft: #1e2333;
+        --chan-r: #e77565;
+        --chan-g: #58c489;
+        --chan-b: #7aa4f5;
+        --warn-soft: #2c1d1a;
+        --warn-ink: #e79a8c;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.5);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); }
+    img { max-width: 100%; }
+
+    /* ---------- Hero ---------- */
+    header.hero {
+      padding: 5.5rem 1.5rem 3rem;
+      text-align: center;
+      background:
+        radial-gradient(1100px 380px at 50% -120px, var(--accent-soft), transparent 70%);
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      font-size: .8rem;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: 600;
+      margin: 0 0 1rem;
+    }
+    header.hero h1 {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      line-height: 1.1;
+      margin: 0 auto .8rem;
+      max-width: 18ch;
+      letter-spacing: -.01em;
+      text-wrap: balance;
+    }
+    header.hero p.lede {
+      color: var(--muted);
+      font-size: 1.1rem;
+      max-width: 54ch;
+      margin: 0 auto 1.6rem;
+    }
+    .byline { font-size: .95rem; color: var(--muted); }
+    .byline strong { color: var(--ink); font-weight: 600; }
+
+    nav.toc {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: .5rem;
+      margin-top: 2rem;
+    }
+    nav.toc a {
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 500;
+      color: var(--ink);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      padding: .5rem 1rem;
+      border-radius: 999px;
+      transition: border-color .2s, transform .2s;
+    }
+    nav.toc a:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+    /* ---------- Layout ---------- */
+    main { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem; }
+    section { padding: 4rem 0; border-bottom: 1px solid var(--line); }
+    section:last-child { border-bottom: none; }
+
+    .sec-head { max-width: 64ch; margin-bottom: 2rem; }
+    .sec-num {
+      display: inline-block;
+      font-family: var(--serif);
+      font-size: .95rem;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: .4rem;
+    }
+    h2 {
+      font-family: var(--serif);
+      font-weight: 600;
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+      margin: 0 0 .6rem;
+      letter-spacing: -.01em;
+      text-wrap: balance;
+    }
+    .sec-head p { color: var(--muted); margin: 0; font-size: 1.05rem; }
+    .prose { max-width: 64ch; }
+    .prose p { margin: 0 0 1rem; }
+    .prose strong { color: var(--ink); }
+    code {
+      font-family: var(--mono);
+      font-size: .86em;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: .1rem .4rem;
+      border-radius: 5px;
+    }
+
+    /* ---------- Pipeline diagram ---------- */
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin: 2.5rem 0 1rem;
+      align-items: stretch;
+    }
+    .step {
+      position: relative;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 1.2rem 1.1rem;
+      box-shadow: var(--shadow);
+    }
+    .step .n {
+      font-family: var(--serif);
+      color: var(--accent);
+      font-weight: 600;
+      font-size: .8rem;
+      letter-spacing: .05em;
+    }
+    .step h4 { margin: .3rem 0 .35rem; font-size: 1rem; }
+    .step p { margin: 0; font-size: .88rem; color: var(--muted); }
+    .plate-stack { display: flex; gap: 3px; margin-top: .7rem; }
+    .plate-stack span {
+      flex: 1; height: 8px; border-radius: 2px;
+    }
+    .pr { background: var(--chan-r); }
+    .pg { background: var(--chan-g); }
+    .pb { background: var(--chan-b); }
+
+    /* ---------- Result grids ---------- */
+    .grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .grid.gallery { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+    @media (max-width: 760px) {
+      .grid.three, .grid.gallery { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .grid.three, .grid.two, .grid.gallery { grid-template-columns: 1fr; }
+    }
+    figure {
+      margin: 0;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+    }
+    figure img { display: block; width: 100%; height: auto; background: var(--line); }
+    figcaption {
+      padding: .8rem 1rem 1rem;
+      font-size: .9rem;
+      color: var(--muted);
+    }
+    figcaption .name {
+      font-weight: 600;
+      color: var(--ink);
+      font-size: .98rem;
+      display: block;
+      margin-bottom: .35rem;
+    }
+    .offsets {
+      font-family: var(--mono);
+      font-size: .8rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .35rem .5rem;
+      font-variant-numeric: tabular-nums;
+    }
+    .offsets .chip {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: .12rem .45rem;
+      white-space: nowrap;
+    }
+    .offsets .g { color: var(--chan-g); }
+    .offsets .r { color: var(--chan-r); }
+
+    /* ---------- Offset table ---------- */
+    .table-wrap { overflow-x: auto; margin-top: 1.5rem; border: 1px solid var(--line); border-radius: 12px; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: .92rem;
+      background: var(--surface);
+    }
+    caption { caption-side: top; text-align: left; color: var(--muted); font-size: .9rem; padding: .9rem 1rem; }
+    th, td { padding: .6rem 1rem; text-align: left; border-bottom: 1px solid var(--line); }
+    thead th {
+      font-size: .74rem; text-transform: uppercase; letter-spacing: .06em;
+      color: var(--muted); font-weight: 600; background: var(--bg);
+    }
+    tbody td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+    tbody tr:last-child td { border-bottom: none; }
+    td .gtxt { color: var(--chan-g); }
+    td .rtxt { color: var(--chan-r); }
+    tr.fail td { background: var(--warn-soft); }
+    .badge {
+      display: inline-block; font-size: .68rem; font-weight: 700;
+      letter-spacing: .04em; text-transform: uppercase;
+      padding: .12rem .45rem; border-radius: 5px;
+    }
+    .badge.ok { color: var(--chan-g); background: color-mix(in srgb, var(--chan-g) 14%, transparent); }
+    .badge.bad { color: var(--warn-ink); background: var(--warn-soft); }
+
+    /* ---------- Callout ---------- */
+    .callout {
+      margin-top: 2rem;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--accent);
+      border-radius: 10px;
+      padding: 1.4rem 1.6rem;
+      box-shadow: var(--shadow);
+    }
+    .callout.warn { border-left-color: var(--warn-ink); }
+    .callout h3 {
+      margin: 0 0 .6rem; font-size: .8rem;
+      letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+    }
+    .callout.warn h3 { color: var(--warn-ink); }
+    .callout p { margin: 0 0 .8rem; }
+    .callout p:last-child { margin-bottom: 0; }
+
+    /* ---------- B&W two-up ---------- */
+    .bw { display: grid; gap: 2rem; }
+    .bw-item { display: grid; grid-template-columns: 300px 1fr; gap: 1.6rem; align-items: center; }
+    @media (max-width: 720px) { .bw-item { grid-template-columns: 1fr; } }
+    .bw-item .txt h3 { margin: 0 0 .5rem; font-family: var(--serif); font-size: 1.25rem; }
+    .bw-item .txt p { margin: 0 0 .7rem; color: var(--muted); }
+    .tag {
+      display: inline-block; font-size: .72rem; font-weight: 600;
+      letter-spacing: .05em; text-transform: uppercase;
+      color: var(--accent); background: var(--accent-soft);
+      padding: .2rem .55rem; border-radius: 6px; margin-bottom: .6rem;
+    }
+
+    /* ---------- Footer ---------- */
+    footer {
+      text-align: center;
+      padding: 3rem 1.5rem 4rem;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+    footer a { text-decoration: none; }
+    .back { display: inline-block; margin-bottom: 1rem; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <p class="eyebrow">CS180 · Computer Vision · Project 1</p>
+    <h1>Colorizing the Prokudin-Gorskii Collection</h1>
+    <p class="lede">Reassembling color photographs from a century-old set of red, green, and blue glass-plate exposures — by teaching a computer to slide the three layers back into register.</p>
+    <p class="byline">By <strong>Yuxiang Liu</strong> · UC Berkeley, Fall 2026</p>
+    <nav class="toc">
+      <a href="#method">Method</a>
+      <a href="#single">Single-Scale</a>
+      <a href="#pyramid">Pyramid Results</a>
+      <a href="#picks">My Picks</a>
+      <a href="#bells">Bells &amp; Whistles</a>
+      <a href="#fail">When It Breaks</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ======================= OVERVIEW / METHOD ======================= -->
+    <section id="method">
+      <div class="sec-head">
+        <span class="sec-num">Overview</span>
+        <h2>Three plates, one photograph</h2>
+        <p>Between 1907 and 1915, Sergei Prokudin-Gorskii travelled the Russian Empire photographing everything through red, green, and blue filters — three separate exposures onto one tall glass plate, meant to be recombined into color long before color film existed.</p>
+      </div>
+
+      <div class="prose">
+        <p>The Library of Congress digitized the surviving plates. Each scan is a vertical strip holding the three brightness records stacked top-to-bottom in <strong>blue, green, red</strong> order. Dropping them straight onto the R/G/B channels of a digital image gives a badly ghosted picture, because the camera shifted slightly between the three exposures. The whole job is to find, for each of the green and red plates, the <em>(dy, dx)</em> shift that snaps it back on top of the blue reference — then stack the aligned plates into one RGB image.</p>
+      </div>
+
+      <div class="pipeline">
+        <div class="step">
+          <span class="n">01</span>
+          <h4>Split the strip</h4>
+          <p>Cut the scan into three equal horizontal thirds — the B, G, and R exposures.</p>
+          <div class="plate-stack"><span class="pb"></span></div>
+          <div class="plate-stack"><span class="pg"></span></div>
+          <div class="plate-stack"><span class="pr"></span></div>
+        </div>
+        <div class="step">
+          <span class="n">02</span>
+          <h4>Score a shift</h4>
+          <p>Slide a plate by <code>(dy, dx)</code> and score the overlap with <strong>normalized cross-correlation</strong>, ignoring the noisy border.</p>
+        </div>
+        <div class="step">
+          <span class="n">03</span>
+          <h4>Search coarse&#8202;→&#8202;fine</h4>
+          <p>An image pyramid finds big shifts on a tiny copy, then refines them level by level on the full plate.</p>
+        </div>
+        <div class="step">
+          <span class="n">04</span>
+          <h4>Stack &amp; trim</h4>
+          <p>Roll G and R by their best shifts, stack into RGB, and crop the ragged edges away.</p>
+          <div class="plate-stack"><span class="pr"></span><span class="pg"></span><span class="pb"></span></div>
+        </div>
+      </div>
+
+      <div class="callout">
+        <h3>The matching metric</h3>
+        <p>Candidate shifts are ranked by <strong>normalized cross-correlation (NCC)</strong> — each plate is mean-subtracted and normalized to a unit vector, and the score is their dot product. Unlike a raw L2 difference, NCC compares <em>structure</em> rather than absolute brightness, so it doesn't get fooled when one filter simply let in more light than another.</p>
+        <p>Before scoring, I crop 15% off every side. The plate edges are full of black scanner borders and the fringe where the three exposures don't overlap — matching on those would reward aligning the junk instead of the picture.</p>
+      </div>
+    </section>
+
+    <!-- ======================= PART 1 : SINGLE SCALE ======================= -->
+    <section id="single">
+      <div class="sec-head">
+        <span class="sec-num">Part 1</span>
+        <h2>Single-scale exhaustive search</h2>
+        <p>For the small JPEG plates, the shift is only a handful of pixels, so a brute-force search over a <code>[&minus;15, 15]</code> window in both directions is enough. Every candidate shift is scored with NCC and the best one wins.</p>
+      </div>
+
+      <div class="grid three">
+        <figure>
+          <img src="../media/images/proj1/web/cathedral.jpg" alt="Colorized cathedral" loading="lazy">
+          <figcaption>
+            <span class="name">cathedral.jpg</span>
+            <div class="offsets">
+              <span class="chip g">G&nbsp;(+5,&nbsp;+2)</span>
+              <span class="chip r">R&nbsp;(+12,&nbsp;+3)</span>
+            </div>
+          </figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/monastery.jpg" alt="Colorized monastery" loading="lazy">
+          <figcaption>
+            <span class="name">monastery.jpg</span>
+            <div class="offsets">
+              <span class="chip g">G&nbsp;(&minus;3,&nbsp;+2)</span>
+              <span class="chip r">R&nbsp;(+3,&nbsp;+2)</span>
+            </div>
+          </figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/tobolsk.jpg" alt="Colorized tobolsk" loading="lazy">
+          <figcaption>
+            <span class="name">tobolsk.jpg</span>
+            <div class="offsets">
+              <span class="chip g">G&nbsp;(+3,&nbsp;+3)</span>
+              <span class="chip r">R&nbsp;(+6,&nbsp;+3)</span>
+            </div>
+          </figcaption>
+        </figure>
+      </div>
+      <div class="prose" style="margin-top:1.5rem">
+        <p>Each label reads <code>(dy, dx)</code> — vertical then horizontal shift applied to that plate. The red plate consistently needs about twice the shift of green, which makes sense: red sits farthest from blue on the original strip, so it drifted the most between exposures.</p>
+      </div>
+    </section>
+
+    <!-- ======================= PART 2 : PYRAMID ======================= -->
+    <section id="pyramid">
+      <div class="sec-head">
+        <span class="sec-num">Part 2</span>
+        <h2>Coarse-to-fine pyramid alignment</h2>
+        <p>The full-resolution <code>.tif</code> plates are ~9,000&nbsp;px tall, and their true shifts run to well over a hundred pixels — far outside any window a single brute-force pass could afford. A recursive image pyramid solves it: estimate the shift on a heavily downsampled copy, double it, then refine within a small window at each finer level.</p>
+      </div>
+
+      <div class="grid gallery" id="gallery">
+        <!-- provided .tif plates -->
+        <figure>
+          <img src="../media/images/proj1/web/church.jpg" alt="Colorized church" loading="lazy">
+          <figcaption><span class="name">church</span><div class="offsets"><span class="chip g">G&nbsp;(+25,&nbsp;+4)</span><span class="chip r">R&nbsp;(+58,&nbsp;&minus;4)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/emir.jpg" alt="Colorized emir" loading="lazy">
+          <figcaption><span class="name">emir</span><div class="offsets"><span class="chip g">G&nbsp;(+49,&nbsp;+24)</span><span class="chip r">R&nbsp;(+107,&nbsp;+40)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/harvesters.jpg" alt="Colorized harvesters" loading="lazy">
+          <figcaption><span class="name">harvesters</span><div class="offsets"><span class="chip g">G&nbsp;(+60,&nbsp;+17)</span><span class="chip r">R&nbsp;(+124,&nbsp;+14)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/icon.jpg" alt="Colorized icon" loading="lazy">
+          <figcaption><span class="name">icon</span><div class="offsets"><span class="chip g">G&nbsp;(+42,&nbsp;+17)</span><span class="chip r">R&nbsp;(+90,&nbsp;+23)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/ilemselga.jpg" alt="Colorized ilemselga" loading="lazy">
+          <figcaption><span class="name">ilemselga</span><div class="offsets"><span class="chip g">G&nbsp;(+40,&nbsp;+7)</span><span class="chip r">R&nbsp;(+131,&nbsp;+11)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/melons.jpg" alt="Colorized melons" loading="lazy">
+          <figcaption><span class="name">melons</span><div class="offsets"><span class="chip g">G&nbsp;(+80,&nbsp;+10)</span><span class="chip r">R&nbsp;(+177,&nbsp;+13)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/religous_painting.jpg" alt="Colorized religious painting" loading="lazy">
+          <figcaption><span class="name">religous_painting</span><div class="offsets"><span class="chip g">G&nbsp;(+30,&nbsp;+1)</span><span class="chip r">R&nbsp;(+70,&nbsp;+6)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/self_portrait.jpg" alt="Colorized self portrait" loading="lazy">
+          <figcaption><span class="name">self_portrait</span><div class="offsets"><span class="chip g">G&nbsp;(+78,&nbsp;+29)</span><span class="chip r">R&nbsp;(+176,&nbsp;+37)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/siren.jpg" alt="Colorized siren" loading="lazy">
+          <figcaption><span class="name">siren</span><div class="offsets"><span class="chip g">G&nbsp;(+49,&nbsp;&minus;6)</span><span class="chip r">R&nbsp;(+96,&nbsp;&minus;24)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/three_generations.jpg" alt="Colorized three generations portrait" loading="lazy">
+          <figcaption><span class="name">three_generations</span><div class="offsets"><span class="chip g">G&nbsp;(+53,&nbsp;+12)</span><span class="chip r">R&nbsp;(+111,&nbsp;+9)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/wharf.jpg" alt="Colorized wharf" loading="lazy">
+          <figcaption><span class="name">wharf</span><div class="offsets"><span class="chip g">G&nbsp;(+15,&nbsp;&minus;6)</span><span class="chip r">R&nbsp;(+82,&nbsp;&minus;16)</span></div></figcaption>
+        </figure>
+      </div>
+      <p class="prose" style="margin-top:1.25rem">The eleven provided <code>.tif</code> plates above; my three self-selected plates are in <a href="#picks">My Picks</a>. Every offset is listed together in the table below.</p>
+
+      <div class="table-wrap">
+        <table>
+          <caption>Recovered displacement vectors <code>(dy, dx)</code>, blue plate as reference; green and red aligned independently. All plates align on gradient (edge) features except <em>family</em>, which aligns on raw pixels — see <a href="#fail">When It Breaks</a>. Runtimes are per full-resolution plate on a laptop CPU.</caption>
+          <thead>
+            <tr><th>Image</th><th>Green (dy, dx)</th><th>Red (dy, dx)</th><th>Runtime</th><th>Result</th></tr>
+          </thead>
+          <tbody id="offset-rows">
+            <tr><td>church</td><td class="num"><span class="gtxt">(25, 4)</span></td><td class="num"><span class="rtxt">(58, &minus;4)</span></td><td class="num">68&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>emir</td><td class="num"><span class="gtxt">(49, 24)</span></td><td class="num"><span class="rtxt">(107, 40)</span></td><td class="num">75&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>harvesters</td><td class="num"><span class="gtxt">(60, 17)</span></td><td class="num"><span class="rtxt">(124, 14)</span></td><td class="num">73&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>icon</td><td class="num"><span class="gtxt">(42, 17)</span></td><td class="num"><span class="rtxt">(90, 23)</span></td><td class="num">76&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>ilemselga</td><td class="num"><span class="gtxt">(40, 7)</span></td><td class="num"><span class="rtxt">(131, 11)</span></td><td class="num">76&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>melons</td><td class="num"><span class="gtxt">(80, 10)</span></td><td class="num"><span class="rtxt">(177, 13)</span></td><td class="num">72&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>religous_painting</td><td class="num"><span class="gtxt">(30, 1)</span></td><td class="num"><span class="rtxt">(70, 6)</span></td><td class="num">70&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>self_portrait</td><td class="num"><span class="gtxt">(78, 29)</span></td><td class="num"><span class="rtxt">(176, 37)</span></td><td class="num">77&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>siren</td><td class="num"><span class="gtxt">(49, &minus;6)</span></td><td class="num"><span class="rtxt">(96, &minus;24)</span></td><td class="num">76&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>three_generations</td><td class="num"><span class="gtxt">(53, 12)</span></td><td class="num"><span class="rtxt">(111, 9)</span></td><td class="num">79&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>wharf</td><td class="num"><span class="gtxt">(15, &minus;6)</span></td><td class="num"><span class="rtxt">(82, &minus;16)</span></td><td class="num">68&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>roof <span style="color:var(--muted)">· mine</span></td><td class="num"><span class="gtxt">(48, &minus;8)</span></td><td class="num"><span class="rtxt">(111, &minus;15)</span></td><td class="num">73&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>tree <span style="color:var(--muted)">· mine</span></td><td class="num"><span class="gtxt">(38, 16)</span></td><td class="num"><span class="rtxt">(84, 31)</span></td><td class="num">76&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+            <tr><td>family <span style="color:var(--muted)">· mine, raw-pixel</span></td><td class="num"><span class="gtxt">(47, &minus;12)</span></td><td class="num"><span class="rtxt">(86, &minus;43)</span></td><td class="num">84&nbsp;s</td><td><span class="badge ok">aligned</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ======================= SELF-SELECTED ======================= -->
+    <section id="picks">
+      <div class="sec-head">
+        <span class="sec-num">My picks</span>
+        <h2>Three plates of my own</h2>
+        <p>Pulled from the Library of Congress collection and run through the same pyramid pipeline. One of them, <em>family</em>, forced an interesting choice about <a href="#bells">what to align on</a> — and is discussed further in <a href="#fail">When It Breaks</a>.</p>
+      </div>
+
+      <div class="grid three">
+        <figure>
+          <img src="../media/images/proj1/web/tree.jpg" alt="Colorized tree scene" loading="lazy">
+          <figcaption><span class="name">tree</span><div class="offsets"><span class="chip g">G&nbsp;(+38,&nbsp;+16)</span><span class="chip r">R&nbsp;(+84,&nbsp;+31)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/roof.jpg" alt="Colorized rooftop scene" loading="lazy">
+          <figcaption><span class="name">roof</span><div class="offsets"><span class="chip g">G&nbsp;(+48,&nbsp;&minus;8)</span><span class="chip r">R&nbsp;(+111,&nbsp;&minus;15)</span></div></figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/family.jpg" alt="Colorized family portrait, aligned on raw pixels" loading="lazy">
+          <figcaption><span class="name">family</span> <span style="font-size:.75rem;color:var(--muted)">· raw-pixel align</span><div class="offsets"><span class="chip g">G&nbsp;(+47,&nbsp;&minus;12)</span><span class="chip r">R&nbsp;(+86,&nbsp;&minus;43)</span></div></figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ======================= BELLS & WHISTLES ======================= -->
+    <section id="bells">
+      <div class="sec-head">
+        <span class="sec-num">Bells &amp; whistles</span>
+        <h2>Two things that made it work</h2>
+        <p>Beyond plain translation search, two design choices did most of the heavy lifting on the hard plates.</p>
+      </div>
+
+      <div class="bw">
+        <div class="bw-item">
+          <figure>
+            <img src="../media/images/proj1/web/emir.jpg" alt="The emir plate, cleanly aligned" loading="lazy">
+            <figcaption><span class="name">emir</span> — the classic hard case, cleanly registered.</figcaption>
+          </figure>
+          <div class="txt">
+            <span class="tag">Aligning on gradients, not pixels</span>
+            <h3>Match edges, not brightness</h3>
+            <p>The <em>emir</em> plate is the textbook failure of raw-pixel alignment: his brilliant blue robe is bright in the blue exposure but nearly black in red, so matching on intensity pulls the plates apart. Instead of the raw plates, I align their <strong>gradient magnitude</strong> (a Sobel edge map). Edges fall in the same place regardless of which filter was brightest, so the match keys on shared structure — collars, seams, the doorframe — and the emir snaps into register. It's the default for every plate but one: on the carpet-heavy <em>family</em> scene the repeating edges backfire, which is its own story in <a href="#fail">When It Breaks</a>.</p>
+          </div>
+        </div>
+
+        <div class="bw-item">
+          <figure>
+            <img src="../media/images/proj1/web/church.jpg" alt="The church plate with trimmed borders" loading="lazy">
+            <figcaption><span class="name">church</span> — clean edges after border handling.</figcaption>
+          </figure>
+          <div class="txt">
+            <span class="tag">Border handling</span>
+            <h3>Ignore the junk, then trim it</h3>
+            <p>Borders hurt twice. During <em>scoring</em>, the black scanner frame and the non-overlapping fringe are the highest-contrast thing in the plate, so I crop 15% off each side before computing NCC — otherwise the search happily aligns the borders instead of the photo. After <em>compositing</em>, the outer 8% is trimmed from the finished RGB image so the coloured fringe left by the shifts doesn't frame every picture.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================= FAILURES ======================= -->
+    <section id="fail">
+      <div class="sec-head">
+        <span class="sec-num">Honesty</span>
+        <h2>When it breaks</h2>
+        <p>All seventeen plates end up correctly registered — but one of them only after switching the thing I aligned on, and a couple carry limits that no shift can repair.</p>
+      </div>
+
+      <div class="grid two">
+        <figure>
+          <img src="../media/images/proj1/web/family.jpg" alt="Family portrait, correctly aligned on raw pixels" loading="lazy">
+          <figcaption>
+            <span class="name">family — the exception to the gradient rule</span>
+            Gradient alignment throws the red plate 571&nbsp;px sideways; on raw pixels it lands correctly. The soft halo on the standing man is his own motion between exposures, not a bad shift.
+          </figcaption>
+        </figure>
+        <figure>
+          <img src="../media/images/proj1/web/church.jpg" alt="Church with a magenta color cast" loading="lazy">
+          <figcaption>
+            <span class="name">church — geometry right, colour off</span>
+            The plates are perfectly registered, but the sky and water carry a magenta cast — a colour-balance issue, not an alignment one.
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="callout warn">
+        <h3>Why <em>family</em> is the one plate I don't align on gradients</h3>
+        <p>Gradient features rescue most hard plates, but they sabotage this one. Aligning <em>family</em>'s edge maps sends the red plate to <code>(+37, +571)</code> — a false match: the scene is wall-to-wall carpet with dense, near-periodic diamond patterns, and in the edge map those repeats correlate strongly at many horizontal offsets. The coarse pyramid level locks onto the wrong repeat, and the finer levels only polish a shift that was already hundreds of pixels off.</p>
+        <p>Feeding the <strong>raw plates</strong> to the same pyramid fixes it: the smooth tonal variation across the carpets is far less self-similar than their edges, so red settles at <code>(+86, &minus;43)</code> — in line with green's <code>(+47, &minus;12)</code> and visibly correct. It's a clean illustration that gradient features are a tool, not a default: they win when brightness disagrees between filters (see <em>emir</em>), and lose when structure repeats.</p>
+        <p>The residual colour fringing on the standing man survives either way. He shifted between the three exposures, so no single global translation can bring his edges into register — that's subject motion, a limitation of the capture, not the algorithm.</p>
+      </div>
+
+      <div class="callout">
+        <h3>The colour cast on <em>church</em></h3>
+        <p>Alignment only decides <em>geometry</em>. The three plates were exposed and digitized with different sensitivities, so even a perfectly registered stack can lean toward one hue. A per-channel white-balance or histogram stretch — an optional extension I didn't implement — would neutralize the magenta without touching the shifts.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="back" href="../index.html">← Back to portfolio</a>
+    <p>CS180: Intro to Computer Vision &amp; Computational Photography · Fall 2026</p>
+  </footer>
+</body>
+</html>
