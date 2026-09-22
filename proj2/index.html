@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fun with Filters and Frequencies</title>
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --surface: #ffffff;
+      --ink: #1c1b1a;
+      --muted: #6b6864;
+      --line: #e7e4df;
+      --accent: #1d4ed8;
+      --accent-soft: #eef2ff;
+      --warn-soft: #fbeaea;
+      --warn-ink: #a23b2d;
+      --ok: #1e8b4e;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+      --radius: 14px;
+      --maxw: 1040px;
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: "SF Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #14130f;
+        --surface: #1c1b18;
+        --ink: #ece9e3;
+        --muted: #a09c94;
+        --line: #302e29;
+        --accent: #8bb0ff;
+        --accent-soft: #1e2333;
+        --warn-soft: #2c1d1a;
+        --warn-ink: #e79a8c;
+        --ok: #58c489;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.5);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font-family: var(--sans); line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); }
+    img { max-width: 100%; }
+
+    /* ---------- Hero ---------- */
+    header.hero {
+      padding: 5.5rem 1.5rem 3rem; text-align: center;
+      background: radial-gradient(1100px 380px at 50% -120px, var(--accent-soft), transparent 70%);
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      font-size: .8rem; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--accent); font-weight: 600; margin: 0 0 1rem;
+    }
+    header.hero h1 {
+      font-family: var(--serif); font-weight: 600;
+      font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1;
+      margin: 0 auto .8rem; max-width: 20ch; letter-spacing: -.01em; text-wrap: balance;
+    }
+    header.hero p.lede { color: var(--muted); font-size: 1.1rem; max-width: 56ch; margin: 0 auto 1.6rem; }
+    .byline { font-size: .95rem; color: var(--muted); }
+    .byline strong { color: var(--ink); font-weight: 600; }
+    nav.toc { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; margin-top: 2rem; }
+    nav.toc a {
+      text-decoration: none; font-size: .9rem; font-weight: 500; color: var(--ink);
+      background: var(--surface); border: 1px solid var(--line);
+      padding: .5rem 1rem; border-radius: 999px; transition: border-color .2s, transform .2s;
+    }
+    nav.toc a:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+    /* ---------- Layout ---------- */
+    main { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem; }
+    section { padding: 4rem 0; border-bottom: 1px solid var(--line); }
+    section:last-child { border-bottom: none; }
+    .sub { margin-top: 3rem; }
+    .sec-head { max-width: 66ch; margin-bottom: 2rem; }
+    .sec-num {
+      display: inline-block; font-family: var(--serif); font-size: .95rem;
+      color: var(--accent); font-weight: 600; margin-bottom: .4rem;
+    }
+    h2 {
+      font-family: var(--serif); font-weight: 600;
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem); margin: 0 0 .6rem;
+      letter-spacing: -.01em; text-wrap: balance;
+    }
+    h3.subh { font-family: var(--serif); font-size: 1.3rem; margin: 0 0 .8rem; }
+    .sec-head p { color: var(--muted); margin: 0; font-size: 1.05rem; }
+    .prose { max-width: 66ch; }
+    .prose p { margin: 0 0 1rem; }
+    .prose strong { color: var(--ink); }
+    .prose ul { max-width: 66ch; color: var(--ink); padding-left: 1.1rem; }
+    .prose li { margin: .3rem 0; }
+    code {
+      font-family: var(--mono); font-size: .86em; background: var(--accent-soft);
+      color: var(--accent); padding: .1rem .4rem; border-radius: 5px;
+    }
+    .eq {
+      font-family: var(--mono); font-size: .95rem; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem;
+      margin: 1.2rem 0; overflow-x: auto; color: var(--ink);
+    }
+
+    /* ---------- Grids ---------- */
+    .grid { display: grid; gap: 1.2rem; margin-top: 1.6rem; }
+    .grid.four { grid-template-columns: repeat(4, 1fr); }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .grid.gallery { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    @media (max-width: 820px) { .grid.four { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 760px) { .grid.three, .grid.gallery { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .grid.three, .grid.two, .grid.four, .grid.gallery { grid-template-columns: 1fr; } }
+    figure {
+      margin: 0; background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+      display: flex; flex-direction: column;
+    }
+    figure img { display: block; width: 100%; height: auto; background: var(--line); }
+    figure.contain img { object-fit: contain; }
+    figcaption { padding: .7rem .9rem .9rem; font-size: .88rem; color: var(--muted); }
+    figcaption .name { font-weight: 600; color: var(--ink); font-size: .95rem; display: block; margin-bottom: .25rem; }
+    .wide img { width: 100%; }
+
+    /* ---------- Callout ---------- */
+    .callout {
+      margin-top: 2rem; background: var(--surface); border: 1px solid var(--line);
+      border-left: 3px solid var(--accent); border-radius: 10px;
+      padding: 1.3rem 1.5rem; box-shadow: var(--shadow);
+    }
+    .callout.ok { border-left-color: var(--ok); }
+    .callout h3 {
+      margin: 0 0 .6rem; font-size: .8rem; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--accent);
+    }
+    .callout.ok h3 { color: var(--ok); }
+    .callout p { margin: 0 0 .7rem; } .callout p:last-child { margin-bottom: 0; }
+
+    /* ---------- Footer ---------- */
+    footer { text-align: center; padding: 3rem 1.5rem 4rem; color: var(--muted); font-size: .9rem; }
+    footer a { text-decoration: none; }
+    .back { display: inline-block; margin-bottom: 1rem; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <p class="eyebrow">CS180 · Computer Vision · Project 2</p>
+    <h1>Fun with Filters and Frequencies</h1>
+    <p class="lede">Building convolution and edge detection from scratch, then taking images apart by frequency — sharpening, hybrid images, and seamless multiresolution blends.</p>
+    <p class="byline">By <strong>Yuxiang Liu</strong> · UC Berkeley, Fall 2026</p>
+    <nav class="toc">
+      <a href="#p11">1.1 Convolutions</a>
+      <a href="#p12">1.2 Finite Difference</a>
+      <a href="#p13">1.3 DoG</a>
+      <a href="#p21">2.1 Sharpening</a>
+      <a href="#p22">2.2 Hybrid Images</a>
+      <a href="#p23">2.3 Stacks</a>
+      <a href="#p24">2.4 Blending</a>
+      <a href="#reflection">Reflection</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- =================== PART 1 INTRO =================== -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-num">Part 1</span>
+        <h2>Fun with filters</h2>
+        <p>Part 1 is about the humble convolution: building it by hand, using it to find edges with finite differences, and then taming the noise by folding a Gaussian into the derivative filter.</p>
+      </div>
+
+      <!-- ---------- 1.1 ---------- -->
+      <div id="p11">
+        <span class="sec-num">1.1</span>
+        <h3 class="subh">Convolutions from scratch</h3>
+        <div class="prose">
+          <p>I implemented 2D convolution directly with NumPy. The image is first <strong>zero-/edge-padded</strong> so that a "same"-size output comes back — a <code>k&times;k</code> filter pads by <code>k//2</code> on every side. The naïve version is four nested loops (rows, columns, and the two kernel axes); collapsing the two inner kernel loops into a single vectorized <code>np.sum(window * kernel)</code> gives the two-loop version, which is what I use below. Both agree with <code>scipy.signal.convolve2d</code> to floating-point precision.</p>
+          <p><strong>Runtime &amp; boundaries.</strong> The four-loop version is painfully slow (an inner Python loop per kernel entry); the two-loop version is dramatically faster because the per-pixel dot product runs in C inside NumPy. <code>scipy</code> is faster still. For boundaries I pad with <code>edge</code> replication rather than zeros, which avoids a dark halo around the border that pure zero-padding would introduce.</p>
+        </div>
+        <div class="grid four">
+          <figure><img src="../media/images/proj2/web/sec1.1_selfie_gray.jpg" alt="Grayscale self-portrait" loading="lazy"><figcaption><span class="name">Original</span>Grayscale self-portrait.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec1.1_box_filtered.jpg" alt="Self-portrait blurred by a 9x9 box filter" loading="lazy"><figcaption><span class="name">9&times;9 box filter</span>Uniform average — a simple blur.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec1.1_dx_filtered.jpg" alt="Horizontal finite difference of self-portrait" loading="lazy"><figcaption><span class="name">D<sub>x</sub></span>Responds to vertical edges.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec1.1_dy_filtered.jpg" alt="Vertical finite difference of self-portrait" loading="lazy"><figcaption><span class="name">D<sub>y</sub></span>Responds to horizontal edges.</figcaption></figure>
+        </div>
+      </div>
+
+      <!-- ---------- 1.2 ---------- -->
+      <div id="p12" class="sub">
+        <span class="sec-num">1.2</span>
+        <h3 class="subh">Finite difference operator</h3>
+        <div class="prose">
+          <p>Edges are where intensity changes fast — where the derivative is large. I convolve the cameraman with a central-difference operator in each direction, <code>D<sub>x</sub> = [1, 0, &minus;1]</code> and its transpose <code>D<sub>y</sub></code> (scaled for contrast), then combine them into the <strong>gradient magnitude</strong>:</p>
+          <div class="eq">gradient_magnitude = &radic;( D<sub>x</sub>&sup2; + D<sub>y</sub>&sup2; )</div>
+          <p>Finally I <strong>binarize</strong> the magnitude with a threshold to get a clean edge map. I chose a threshold of <strong>100</strong> by sweeping values: too low and the film-grain noise in the flat sky and grass survives as speckle; too high and the faint edges of the buildings and tripod legs drop out. 100 is the point where the true structure stays connected while most of the noise disappears.</p>
+        </div>
+        <div class="grid four">
+          <figure><img src="../media/images/proj2/web/sec1.2_cam_dx.jpg" alt="Cameraman x-derivative" loading="lazy"><figcaption><span class="name">D<sub>x</sub></span>Partial derivative, x.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec1.2_cam_dy.jpg" alt="Cameraman y-derivative" loading="lazy"><figcaption><span class="name">D<sub>y</sub></span>Partial derivative, y.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec1.2_gradient_magnitude.jpg" alt="Cameraman gradient magnitude" loading="lazy"><figcaption><span class="name">Gradient magnitude</span>&radic;(D<sub>x</sub>&sup2;+D<sub>y</sub>&sup2;).</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec1.2_edge_detected.jpg" alt="Binarized edge map of cameraman" loading="lazy"><figcaption><span class="name">Binarized (t = 100)</span>Thresholded edge map.</figcaption></figure>
+        </div>
+      </div>
+
+      <!-- ---------- 1.3 ---------- -->
+      <div id="p13" class="sub">
+        <span class="sec-num">1.3</span>
+        <h3 class="subh">Derivative of Gaussian (DoG) filter</h3>
+        <div class="prose">
+          <p>The raw finite-difference edge map is noisy because differentiation <em>amplifies</em> high-frequency noise. The fix is to blur first with a Gaussian (a low-pass filter), then differentiate. Because convolution is <strong>associative</strong>, blurring-then-differentiating is identical to convolving once with a pre-computed <strong>Derivative-of-Gaussian</strong> kernel:</p>
+          <div class="eq">(G &lowast; I) then D  =  (G &lowast; D) &lowast; I</div>
+          <p>I built the DoG kernels as the full convolution of a Gaussian (&sigma; = 1) with <code>D<sub>x</sub></code> and <code>D<sub>y</sub></code>. Applying them in one pass gives a gradient magnitude that is <strong>identical to the two-pass version to machine precision</strong> (mean interior difference &asymp; 10<sup>&minus;14</sup>) — a nice sanity check on the associativity claim.</p>
+        </div>
+        <div class="grid four">
+          <figure><img src="../media/images/proj2/web/sec1.3_cam_blurred.jpg" alt="Gaussian-blurred cameraman" loading="lazy"><figcaption><span class="name">Blurred (&sigma;=1)</span>Low-pass smoothed input.</figcaption></figure>
+          <figure class="contain"><img src="../media/images/proj2/web/sec1.3_dog_x.jpg" alt="Derivative of Gaussian kernel, x" loading="lazy"><figcaption><span class="name">DoG<sub>x</sub> kernel</span>G &lowast; D<sub>x</sub>.</figcaption></figure>
+          <figure class="contain"><img src="../media/images/proj2/web/sec1.3_dog_y.jpg" alt="Derivative of Gaussian kernel, y" loading="lazy"><figcaption><span class="name">DoG<sub>y</sub> kernel</span>G &lowast; D<sub>y</sub>.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec1.3_gradient_magnitude_1step.jpg" alt="Gradient magnitude from DoG" loading="lazy"><figcaption><span class="name">DoG magnitude</span>Single-pass result.</figcaption></figure>
+        </div>
+        <div class="grid three">
+          <figure><img src="../media/images/proj2/web/sec1.3_edge_detected_2step.jpg" alt="DoG edge map, two-pass" loading="lazy"><figcaption><span class="name">Two-pass edges</span>Blur, then differentiate.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec1.3_edge_detected_1step.jpg" alt="DoG edge map, single-pass" loading="lazy"><figcaption><span class="name">Single-pass edges</span>One DoG convolution — identical.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec1.2_edge_detected.jpg" alt="Plain finite difference edge map for comparison" loading="lazy"><figcaption><span class="name">Plain D (1.2)</span>For comparison — noisier.</figcaption></figure>
+        </div>
+        <div class="callout ok">
+          <h3>What differs from Part 1.2</h3>
+          <p>The DoG edges are <strong>cleaner and more continuous</strong>: the speckle in the sky and grass is gone, and the true contours are thicker and better connected. The cost is a little localization precision — smoothing slightly fattens and rounds sharp corners. Blurring before differentiating trades a hair of edge sharpness for a large reduction in noise.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== PART 2 INTRO =================== -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-num">Part 2</span>
+        <h2>Fun with frequencies</h2>
+        <p>Part 2 treats an image as a stack of frequency bands. Once you can separate low from high, you can boost detail (sharpening), swap detail between two pictures (hybrid images), and stitch two pictures together band-by-band (multiresolution blending).</p>
+      </div>
+
+      <!-- ---------- 2.1 ---------- -->
+      <div id="p21">
+        <span class="sec-num">2.1</span>
+        <h3 class="subh">Image sharpening — the unsharp mask</h3>
+        <div class="prose">
+          <p>Blurring an image with a Gaussian keeps only its low frequencies. Subtracting the blur from the original leaves the <strong>high frequencies</strong> — the edges and fine detail. An image looks sharper when its high frequencies are stronger, so we simply add a scaled copy of that detail back:</p>
+          <div class="eq">sharpened = I + &alpha;&middot;(I &minus; G&lowast;I)  =  ( (1+&alpha;)&middot;e &minus; &alpha;&middot;G ) &lowast; I</div>
+          <p>The right-hand form folds the whole operation into a <strong>single</strong> convolution kernel — the unsharp mask filter — where <code>e</code> is the identity (unit-impulse) kernel. Below, &alpha; = 2.</p>
+        </div>
+        <div class="grid four">
+          <figure><img src="../media/images/proj2/web/sec2.1_taj_original.jpg" alt="Original Taj Mahal" loading="lazy"><figcaption><span class="name">Original</span>Taj Mahal.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.1_taj_blurred.jpg" alt="Blurred Taj Mahal" loading="lazy"><figcaption><span class="name">Blurred</span>Low frequencies.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.1_taj_highfreq.jpg" alt="High frequencies of Taj Mahal" loading="lazy"><figcaption><span class="name">High freq (+128)</span>I &minus; blurred.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.1_taj_sharpened.jpg" alt="Sharpened Taj Mahal" loading="lazy"><figcaption><span class="name">Sharpened</span>&alpha; = 2.</figcaption></figure>
+        </div>
+        <div class="grid four" style="margin-top:1.2rem">
+          <figure><img src="../media/images/proj2/web/sec2.1_tower_original.jpg" alt="Original Campanile" loading="lazy"><figcaption><span class="name">Campanile — original</span>My second image.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.1_tower_highfreq.jpg" alt="High frequencies of Campanile" loading="lazy"><figcaption><span class="name">High freq (+128)</span>Extracted detail.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.1_tower_sharpened.jpg" alt="Sharpened Campanile" loading="lazy"><figcaption><span class="name">Sharpened</span>&alpha; = 2.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.1_tower_blur_then_sharpen.jpg" alt="Campanile blurred then resharpened" loading="lazy"><figcaption><span class="name">Blur &rarr; resharpen</span>&alpha; = 3.</figcaption></figure>
+        </div>
+        <div class="callout">
+          <h3>Blurring a sharp image, then re-sharpening it</h3>
+          <p>As an experiment I took the already-sharp Campanile, blurred it (&sigma; = 2), then ran the unsharp mask on the result. Sharpening makes the edges <em>look</em> crisper, but it <strong>cannot recover the original</strong>: the Gaussian permanently threw away the high frequencies, and the unsharp mask can only re-amplify what survived — it can't reinvent lost detail. You also see faint halos around high-contrast edges at &alpha; = 3. The lesson: sharpening is not the inverse of blurring.</p>
+        </div>
+      </div>
+
+      <!-- ---------- 2.2 ---------- -->
+      <div id="p22" class="sub">
+        <span class="sec-num">2.2</span>
+        <h3 class="subh">Hybrid images</h3>
+        <div class="prose">
+          <p>A hybrid image blends the <strong>low frequencies of one picture with the high frequencies of another</strong>. Up close your eye reads the sharp high-frequency image; from far away (or squinting) only the smooth low-frequency image survives, so the interpretation flips with viewing distance. I low-pass one image with a Gaussian and high-pass the other (original minus its Gaussian blur), then add them. The cutoff for each image is the Gaussian &sigma;, tuned by hand per pair.</p>
+        </div>
+
+        <h4 style="font-family:var(--serif);font-size:1.1rem;margin:1.5rem 0 .3rem">Full analysis — bear (far) + tiger (near)</h4>
+        <p class="prose" style="font-size:.95rem">Low-pass &sigma; and high-pass cutoff both set to <strong>&sigma; = 6</strong>. I picked this by experiment: a smaller &sigma; left too much of the bear's sharp fur competing with the tiger up close, while a larger &sigma; washed the bear out at a distance. &sigma; = 6 is where the tiger dominates near and the bear dominates far.</p>
+        <div class="grid four">
+          <figure><img src="../media/images/proj2/web/sec2.2_pair2_input_low.jpg" alt="Bear input" loading="lazy"><figcaption><span class="name">Input — bear (low)</span></figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.2_pair2_input_high.jpg" alt="Tiger input" loading="lazy"><figcaption><span class="name">Input — tiger (high)</span></figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.2_pair2_lowpass.jpg" alt="Low-pass bear" loading="lazy"><figcaption><span class="name">Low-pass (bear)</span></figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.2_pair2_highpass.jpg" alt="High-pass tiger" loading="lazy"><figcaption><span class="name">High-pass (tiger, +128)</span></figcaption></figure>
+        </div>
+        <div class="grid four" style="margin-top:1.2rem">
+          <figure class="contain"><img src="../media/images/proj2/web/sec2.2_pair2_fft_input_low.png" alt="FFT of bear" loading="lazy"><figcaption><span class="name">FFT — bear</span>log|F|.</figcaption></figure>
+          <figure class="contain"><img src="../media/images/proj2/web/sec2.2_pair2_fft_input_high.png" alt="FFT of tiger" loading="lazy"><figcaption><span class="name">FFT — tiger</span>log|F|.</figcaption></figure>
+          <figure class="contain"><img src="../media/images/proj2/web/sec2.2_pair2_fft_lowpass.png" alt="FFT of low-pass" loading="lazy"><figcaption><span class="name">FFT — low-pass</span>Energy at center.</figcaption></figure>
+          <figure class="contain"><img src="../media/images/proj2/web/sec2.2_pair2_fft_highpass.png" alt="FFT of high-pass" loading="lazy"><figcaption><span class="name">FFT — high-pass</span>Center suppressed.</figcaption></figure>
+        </div>
+        <div class="grid two" style="margin-top:1.2rem">
+          <figure><img src="../media/images/proj2/web/sec2.2_pair2_hybrid.jpg" alt="Bear-tiger hybrid" loading="lazy"><figcaption><span class="name">Hybrid result</span>Tiger up close, bear from afar.</figcaption></figure>
+          <figure class="contain"><img src="../media/images/proj2/web/sec2.2_pair2_fft_hybrid.png" alt="FFT of hybrid" loading="lazy"><figcaption><span class="name">FFT — hybrid</span>Low + high energy combined.</figcaption></figure>
+        </div>
+        <div class="prose" style="margin-top:1rem">
+          <p>The Fourier transforms make the mechanism visible: the <strong>low-pass</strong> spectrum concentrates all its energy in a bright blob at the center (low frequencies), while the <strong>high-pass</strong> spectrum has a dark hole at the center with energy pushed out to the edges (high frequencies). The hybrid's spectrum is simply their sum.</p>
+        </div>
+
+        <h4 style="font-family:var(--serif);font-size:1.1rem;margin:2rem 0 .3rem">Two more hybrids</h4>
+        <div class="grid three">
+          <figure><img src="../media/images/proj2/web/sec2.2_pair1_input_low.jpg" alt="Berkeley seal" loading="lazy"><figcaption><span class="name">Berkeley (low) + Stanford (high)</span>Inputs.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.2_pair1_input_high.jpg" alt="Stanford logo" loading="lazy"><figcaption><span class="name">Stanford (high)</span></figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.2_pair1_hybrid.jpg" alt="Berkeley-Stanford hybrid" loading="lazy"><figcaption><span class="name">Hybrid (&sigma;=5)</span>Berkeley far, Stanford near.</figcaption></figure>
+        </div>
+        <div class="grid three" style="margin-top:1.2rem">
+          <figure><img src="../media/images/proj2/web/sec2.2_pair3_input_low.jpg" alt="Elon input" loading="lazy"><figcaption><span class="name">Elon (low)</span></figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.2_pair3_input_high.jpg" alt="Jensen input" loading="lazy"><figcaption><span class="name">Jensen (high)</span></figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.2_pair3_hybrid.jpg" alt="Elon-Jensen hybrid" loading="lazy"><figcaption><span class="name">Hybrid (&sigma;=5)</span>Faces trade at distance.</figcaption></figure>
+        </div>
+      </div>
+
+      <!-- ---------- 2.3 ---------- -->
+      <div id="p23" class="sub">
+        <span class="sec-num">2.3</span>
+        <h3 class="subh">Gaussian and Laplacian stacks</h3>
+        <div class="prose">
+          <p>A <strong>stack</strong> is like a pyramid but without downsampling — every level stays full resolution. The <strong>Gaussian stack</strong> applies progressively stronger blur (I double &sigma; each level, starting at &sigma; = 2, over 5 levels). The <strong>Laplacian stack</strong> is the difference between consecutive Gaussian levels — each level isolates one frequency band — with the final blurred level kept as the low-pass residual. By construction the Laplacian levels sum exactly back to the original image (verified to ~10<sup>&minus;14</sup>), which is what makes band-by-band blending possible in 2.4.</p>
+          <p>The Laplacian levels are <strong>signed</strong>, so they are shown offset by +128 (mid-gray = zero).</p>
+        </div>
+        <div class="grid two">
+          <figure class="wide"><img src="../media/images/proj2/web/sec2.3_apple_gauss_row.jpg" alt="Apple Gaussian stack" loading="lazy"><figcaption><span class="name">Apple — Gaussian stack</span>Coarse &rarr; fine (levels 0&ndash;4).</figcaption></figure>
+          <figure class="wide"><img src="../media/images/proj2/web/sec2.3_orange_gauss_row.jpg" alt="Orange Gaussian stack" loading="lazy"><figcaption><span class="name">Orange — Gaussian stack</span></figcaption></figure>
+          <figure class="wide"><img src="../media/images/proj2/web/sec2.3_apple_lap_row.jpg" alt="Apple Laplacian stack" loading="lazy"><figcaption><span class="name">Apple — Laplacian stack</span>Frequency bands + residual.</figcaption></figure>
+          <figure class="wide"><img src="../media/images/proj2/web/sec2.3_orange_lap_row.jpg" alt="Orange Laplacian stack" loading="lazy"><figcaption><span class="name">Orange — Laplacian stack</span></figcaption></figure>
+        </div>
+        <div class="callout">
+          <h3>Recreating Figure 3.42 — the "oraple"</h3>
+          <p>Blending each Laplacian band with a Gaussian-blurred vertical mask (blurred at the matching level so coarse bands blend over a wide seam and fine bands over a narrow one), then summing, reproduces Szeliski's Figure 3.42. The grid below shows the apple's masked band, the orange's masked band, and their sum at each level — the last row is the smooth low-pass residual.</p>
+        </div>
+        <div class="grid two">
+          <figure class="contain"><img src="../media/images/proj2/web/sec2.3_figure_3_42.png" alt="Figure 3.42 recreation grid" loading="lazy"><figcaption><span class="name">Figure 3.42 recreation</span>Apple | Orange | Combined, per level.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.3_oraple.jpg" alt="The oraple" loading="lazy"><figcaption><span class="name">The oraple</span>Collapsed blend — no visible seam.</figcaption></figure>
+        </div>
+      </div>
+
+      <!-- ---------- 2.4 ---------- -->
+      <div id="p24" class="sub">
+        <span class="sec-num">2.4</span>
+        <h3 class="subh">Multiresolution blending</h3>
+        <div class="prose">
+          <p>The oraple recipe generalizes to any pair of images and any mask. For each Laplacian level I blend <code>mask&middot;L<sub>1</sub> + (1&minus;mask)&middot;L<sub>2</sub></code>, where the mask itself is Gaussian-blurred at that level, then sum the blended stack. Wide, soft transitions on the coarse bands and tight ones on the fine bands are exactly what erase the seam.</p>
+        </div>
+
+        <h4 style="font-family:var(--serif);font-size:1.1rem;margin:1.5rem 0 .3rem">Vertical seam — Berkeley + Stanford seals</h4>
+        <div class="grid four">
+          <figure><img src="../media/images/proj2/web/sec2.4_vertical_im1.jpg" alt="Berkeley seal input" loading="lazy"><figcaption><span class="name">Left — Berkeley</span></figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.4_vertical_im2.jpg" alt="Stanford logo input" loading="lazy"><figcaption><span class="name">Right — Stanford</span></figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.4_vertical_mask.jpg" alt="Vertical mask" loading="lazy"><figcaption><span class="name">Mask</span>Vertical step.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.4_vertical_blend.jpg" alt="Berkeley-Stanford blend" loading="lazy"><figcaption><span class="name">Blend</span>Seamless join.</figcaption></figure>
+        </div>
+
+        <h4 style="font-family:var(--serif);font-size:1.1rem;margin:2rem 0 .3rem">Irregular mask — Jensen's face into Elon's head</h4>
+        <p class="prose" style="font-size:.95rem">My favorite result. Jensen's face is affine-warped so his eyes and mouth land on Elon's, then a <strong>circular mask</strong> drops his face onto Elon's head. Elon's dark hair, goatee, and skin frame Jensen's smiling, bespectacled face — with no hard boundary.</p>
+        <div class="grid four">
+          <figure><img src="../media/images/proj2/web/sec2.4_circle_elon.jpg" alt="Elon head background" loading="lazy"><figcaption><span class="name">Background — Elon</span></figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.4_circle_jenson.jpg" alt="Jensen face aligned" loading="lazy"><figcaption><span class="name">Foreground — Jensen</span>Warped to Elon's features.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.4_circle_mask.jpg" alt="Circle mask" loading="lazy"><figcaption><span class="name">Mask</span>Circle over the face.</figcaption></figure>
+          <figure><img src="../media/images/proj2/web/sec2.4_circle_blend.jpg" alt="Jensen-into-Elon blend" loading="lazy"><figcaption><span class="name">Blend</span>Jensen's face, Elon's head.</figcaption></figure>
+        </div>
+        <figure class="wide" style="margin-top:1.2rem">
+          <img src="../media/images/proj2/web/sec2.4_circle_lap_row.jpg" alt="Laplacian stack of the blended result" loading="lazy">
+          <figcaption><span class="name">Laplacian stack of the blend</span>The blended frequency bands (offset +128) that sum to the final image — coarse-to-fine, left to right.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- =================== REFLECTION =================== -->
+    <section id="reflection">
+      <div class="sec-head">
+        <span class="sec-num">Reflection</span>
+        <h2>What I took away</h2>
+      </div>
+      <div class="prose">
+        <p>The single idea that tied the whole project together is that <strong>convolution is linear and associative</strong>, and that a chain of linear image operations can always be folded into one filter. It shows up everywhere here: the derivative-of-Gaussian is just <code>G&lowast;D</code> pre-combined; the unsharp mask is <code>(1+&alpha;)e &minus; &alpha;G</code> in a single kernel; and multiresolution blending is nothing but doing the blend independently in each frequency band and adding the bands back up.</p>
+        <p>The most valuable practical lesson was subtler: <strong>keep signed data in floating point</strong>. Derivatives, high-pass images, and Laplacian levels are all signed, and the moment they touch <code>uint8</code> the negatives either clip to zero or wrap around — silently destroying half the signal. Once every stage worked in float, the identities I expected on paper (single-pass = two-pass DoG, and Laplacian levels summing back to the original) held to machine precision, and the blends came out seamless.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="back" href="../index.html">&larr; Back to portfolio</a>
+    <p>CS180: Intro to Computer Vision &amp; Computational Photography · Fall 2026</p>
+  </footer>
+</body>
+</html>
