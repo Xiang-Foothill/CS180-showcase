@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exploring the Power of Flow Models</title>
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --surface: #ffffff;
+      --ink: #1c1b1a;
+      --muted: #6b6864;
+      --line: #e7e4df;
+      --accent: #1d4ed8;
+      --accent-soft: #eef2ff;
+      --warn-soft: #fbeaea;
+      --warn-ink: #a23b2d;
+      --ok: #1e8b4e;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+      --radius: 14px;
+      --maxw: 1040px;
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: "SF Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #14130f;
+        --surface: #1c1b18;
+        --ink: #ece9e3;
+        --muted: #a09c94;
+        --line: #302e29;
+        --accent: #8bb0ff;
+        --accent-soft: #1e2333;
+        --warn-soft: #2c1d1a;
+        --warn-ink: #e79a8c;
+        --ok: #58c489;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.5);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font-family: var(--sans); line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); }
+    img { max-width: 100%; }
+
+    /* ---------- Hero ---------- */
+    header.hero {
+      padding: 5.5rem 1.5rem 3rem; text-align: center;
+      background: radial-gradient(1100px 380px at 50% -120px, var(--accent-soft), transparent 70%);
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      font-size: .8rem; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--accent); font-weight: 600; margin: 0 0 1rem;
+    }
+    header.hero h1 {
+      font-family: var(--serif); font-weight: 600;
+      font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1;
+      margin: 0 auto .8rem; max-width: 20ch; letter-spacing: -.01em; text-wrap: balance;
+    }
+    header.hero p.lede { color: var(--muted); font-size: 1.1rem; max-width: 56ch; margin: 0 auto 1.6rem; }
+    .byline { font-size: .95rem; color: var(--muted); }
+    .byline strong { color: var(--ink); font-weight: 600; }
+    nav.toc { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; margin-top: 2rem; }
+    nav.toc a {
+      text-decoration: none; font-size: .9rem; font-weight: 500; color: var(--ink);
+      background: var(--surface); border: 1px solid var(--line);
+      padding: .5rem 1rem; border-radius: 999px; transition: border-color .2s, transform .2s;
+    }
+    nav.toc a:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+    /* ---------- Layout ---------- */
+    main { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem; }
+    section { padding: 4rem 0; border-bottom: 1px solid var(--line); }
+    section:last-child { border-bottom: none; }
+    .sub { margin-top: 3rem; }
+    .sec-head { max-width: 66ch; margin-bottom: 2rem; }
+    .sec-num {
+      display: inline-block; font-family: var(--serif); font-size: .95rem;
+      color: var(--accent); font-weight: 600; margin-bottom: .4rem;
+    }
+    h2 {
+      font-family: var(--serif); font-weight: 600;
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem); margin: 0 0 .6rem;
+      letter-spacing: -.01em; text-wrap: balance;
+    }
+    h3.subh { font-family: var(--serif); font-size: 1.3rem; margin: 0 0 .8rem; }
+    .sec-head p { color: var(--muted); margin: 0; font-size: 1.05rem; }
+    .prose { max-width: 66ch; }
+    .prose p { margin: 0 0 1rem; }
+    .prose strong { color: var(--ink); }
+    .prose ul { max-width: 66ch; color: var(--ink); padding-left: 1.1rem; }
+    .prose li { margin: .3rem 0; }
+    code {
+      font-family: var(--mono); font-size: .86em; background: var(--accent-soft);
+      color: var(--accent); padding: .1rem .4rem; border-radius: 5px;
+    }
+    .eq {
+      font-family: var(--mono); font-size: .95rem; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem;
+      margin: 1.2rem 0; overflow-x: auto; color: var(--ink);
+    }
+
+    /* ---------- Grids ---------- */
+    .grid { display: grid; gap: 1.2rem; margin-top: 1.6rem; }
+    .grid.five { grid-template-columns: repeat(5, 1fr); }
+    .grid.four { grid-template-columns: repeat(4, 1fr); }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .grid.gallery { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    .narrow { max-width: 780px; }
+    @media (max-width: 820px) {
+      .grid.four { grid-template-columns: repeat(2, 1fr); }
+      .grid.five { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 760px) { .grid.three, .grid.gallery { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) {
+      .grid.three, .grid.two, .grid.four, .grid.gallery { grid-template-columns: 1fr; }
+      .grid.five { grid-template-columns: repeat(2, 1fr); }
+    }
+    figure {
+      margin: 0; background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+      display: flex; flex-direction: column;
+    }
+    figure img { display: block; width: 100%; height: auto; background: var(--line); }
+    figure.contain img { object-fit: contain; }
+    figcaption { padding: .7rem .9rem .9rem; font-size: .88rem; color: var(--muted); }
+    figcaption .name { font-weight: 600; color: var(--ink); font-size: .95rem; display: block; margin-bottom: .25rem; }
+    .wide img { width: 100%; }
+
+    /* Original image beside an explanation (1.4) */
+    .split {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      gap: 1.2rem; align-items: start; margin-top: 1.6rem;
+    }
+    .split .callout { margin-top: 0; }
+    @media (max-width: 640px) { .split { grid-template-columns: 1fr; } }
+
+    /* ---------- Small number tables ---------- */
+    table.stats { border-collapse: collapse; margin: .4rem 0 1rem; font-size: .95rem; }
+    table.stats th, table.stats td { padding: .45rem 1.1rem .45rem 0; border-bottom: 1px solid var(--line); text-align: left; }
+    table.stats th { color: var(--muted); font-weight: 600; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
+    table.stats td.num { font-family: var(--mono); font-size: .9rem; }
+    table.stats th .sym { text-transform: none; font-size: .95rem; }
+
+    /* ---------- Sweeps, cases, hybrids (Sections 2-3) ---------- */
+    .sweep figcaption { padding: .5rem .8rem .6rem; }
+    .sweep figcaption .name { margin-bottom: 0; }
+    h4.case { font-family: var(--serif); font-size: 1.1rem; margin: 2.2rem 0 .2rem; }
+    .note { max-width: 66ch; color: var(--muted); font-size: .95rem; margin: .9rem 0 0; }
+    .grid.hybrid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); max-width: 860px; }
+    @media (max-width: 560px) { .grid.hybrid { grid-template-columns: 1fr; } }
+    .far { flex: 1; min-height: 160px; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+    figure .far img { width: 64px; height: 64px; background: none; }
+
+    /* ---------- Callout ---------- */
+    .callout {
+      margin-top: 2rem; background: var(--surface); border: 1px solid var(--line);
+      border-left: 3px solid var(--accent); border-radius: 10px;
+      padding: 1.3rem 1.5rem; box-shadow: var(--shadow);
+    }
+    .callout.ok { border-left-color: var(--ok); }
+    .callout h3 {
+      margin: 0 0 .6rem; font-size: .8rem; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--accent);
+    }
+    .callout.ok h3 { color: var(--ok); }
+    .callout p { margin: 0 0 .7rem; } .callout p:last-child { margin-bottom: 0; }
+
+    /* ---------- Footer ---------- */
+    footer { text-align: center; padding: 3rem 1.5rem 4rem; color: var(--muted); font-size: .9rem; }
+    footer a { text-decoration: none; }
+    .back { display: inline-block; margin-bottom: 1rem; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <p class="eyebrow">CS180 · Computer Vision · Project 3, Part A</p>
+    <h1>Exploring the Power of Flow Models</h1>
+    <p class="lede">Taking a pretrained text-to-image flow model apart, then putting it to work: denoising and generating images, steering them with guidance, editing photos and drawings, and building optical illusions.</p>
+    <p class="byline">By <strong>Yuxiang Liu</strong> · UC Berkeley, Fall 2026</p>
+    <nav class="toc">
+      <a href="#s11">1.1 Noisy Inputs</a>
+      <a href="#s12">1.2 Classical Denoising</a>
+      <a href="#s13">1.3 One-Step Denoising</a>
+      <a href="#s14">1.4 Velocity</a>
+      <a href="#s15">1.5 Euler Sampling</a>
+      <a href="#s16">1.6 Generation</a>
+      <a href="#s21">2.1 CFG</a>
+      <a href="#s31">3.1 Editing</a>
+      <a href="#s32">3.2 Text-Guided Editing</a>
+      <a href="#s33">3.3 Visual Anagrams</a>
+      <a href="#s34">3.4 Hybrid Images</a>
+      <a href="#reflection">Reflection</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- =================== SECTION 1 INTRO =================== -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-num">Section 1</span>
+        <h2>Visualizing training and sampling</h2>
+        <p>Before using the model creatively, I took one photo apart the way flow matching sees it: blend it with noise, ask the model which way the clean image lies, and follow that direction, first in one jump and then in many small steps.</p>
+      </div>
+
+      <div class="prose">
+        <p>Flow matching connects Gaussian noise and real images with straight lines. Given noise x<sub>0</sub> = &epsilon; and a clean image x<sub>1</sub>, every point on the path is a blend of the two:</p>
+        <div class="eq">x<sub>t</sub> = (1 &minus; t)&middot;x<sub>0</sub> + t&middot;x<sub>1</sub>,&nbsp;&nbsp; x<sub>0</sub> = &epsilon; ~ N(0, I),&nbsp;&nbsp; t &isin; [0, 1]</div>
+        <p>so <strong>t = 0 is pure noise and t = 1 is the clean image</strong>. A network v<sub>&theta;</sub> is trained to predict the path's velocity, the direction from noise to image, from the blended point alone (c is the text condition):</p>
+        <div class="eq">L(&theta;) = E &#8214; v<sub>&theta;</sub>(x<sub>t</sub>, t, c) &minus; (x<sub>1</sub> &minus; x<sub>0</sub>) &#8214;&sup2;</div>
+        <p>To generate, start at noise and follow the learned velocity field from t = 0 to t = 1, i.e. integrate dx<sub>t</sub>/dt = v<sub>&theta;</sub>(x<sub>t</sub>, t, c).</p>
+      </div>
+
+      <div class="callout">
+        <h3>Setup</h3>
+        <p>I used the pretrained <strong>PixNerd-XXL-P16-T2I</strong> model, which works directly on 512&times;512 pixels; nothing was trained. All of Section 1 conditions on the prompt <code>"a high quality photo"</code>, uses seed 180 for the noise, and ran on a Colab T4 GPU.</p>
+        <p>My test image is a photo of <strong>Sather Tower (the Campanile)</strong> framed by bare trees. It contains three very different kinds of content: smooth sky, a large and simple vertical shape, and many thin branches. The source photo is only 468&times;312, so after the supplied center-crop and resize to 512&times;512 it is slightly soft.</p>
+      </div>
+
+      <!-- ---------- 1.1 ---------- -->
+      <div id="s11" class="sub">
+        <span class="sec-num">1.1</span>
+        <h3 class="subh">Constructing noisy training inputs</h3>
+        <div class="prose">
+          <p><code>interpolate</code> is the path equation itself, <code>image * t + noise * (1 - t)</code>. It is a blend, not just added noise: the image is scaled down by t while the noise is scaled by 1 &minus; t. At t = 0.25 the picture keeps a quarter of its contrast under noise three times as strong, which is why it looks washed out as well as grainy.</p>
+          <p>I sampled <strong>one</strong> noise tensor and reused it at all three times, and kept the image/noise pair for Sections 1.2&ndash;1.5. Both endpoints come back bit-for-bit: <code>interpolate(x1, &epsilon;, 0)</code> equals &epsilon; and <code>interpolate(x1, &epsilon;, 1)</code> equals x<sub>1</sub> under <code>torch.equal</code>.</p>
+        </div>
+        <div class="grid four">
+          <figure><img src="../media/images/proj3/web/sec1_original.jpg" alt="Sather Tower photo, center-cropped to 512 by 512" loading="lazy"><figcaption><span class="name">Original</span>Preprocessed to 512&times;512, RGB in [&minus;1, 1].</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.1_t0.25.jpg" alt="Noisy tower at t = 0.25" loading="lazy"><figcaption><span class="name">t = 0.25</span>Only the dark belfry openings and the rough outline of the trees survive.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.1_t0.50.jpg" alt="Noisy tower at t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span>Tower and main branches are clear; thin twigs disappear into the grain.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.1_t0.75.jpg" alt="Noisy tower at t = 0.75" loading="lazy"><figcaption><span class="name">t = 0.75</span>Close to the original under a light grain.</figcaption></figure>
+        </div>
+      </div>
+
+      <!-- ---------- 1.2 ---------- -->
+      <div id="s12" class="sub">
+        <span class="sec-num">1.2</span>
+        <h3 class="subh">Classical denoising</h3>
+        <div class="prose">
+          <p>The baseline without a learned model is a Gaussian blur: averaging neighboring pixels makes independent, zero-mean noise partly cancel. Because x<sub>t</sub> holds the image at only t times its brightness, I first divide by t, then blur:</p>
+          <div class="eq">x<sub>t</sub> / t = x<sub>1</sub> + ((1 &minus; t) / t)&middot;&epsilon;&nbsp;&nbsp; &rArr; &nbsp;&nbsp;x&#770;<sub>1</sub> = G<sub>&sigma;</sub>(x<sub>t</sub> / t)</div>
+          <p>Dividing restores the image's amplitude but scales the noise by the same factor, so the signal-to-noise ratio does not change. For each input I swept <strong>&sigma; &isin; {1, 2, 4, 8, 16}</strong> (kernel size 6&sigma; + 1) and kept the result with the lowest mean squared error against the clean image.</p>
+          <table class="stats">
+            <thead><tr><th><span class="sym">t</span></th><th>Noise std after &divide; <span class="sym">t</span></th><th>Best <span class="sym">&sigma;</span></th></tr></thead>
+            <tbody>
+              <tr><td class="num">0.25</td><td class="num">3.00</td><td class="num">4</td></tr>
+              <tr><td class="num">0.50</td><td class="num">1.00</td><td class="num">2</td></tr>
+              <tr><td class="num">0.75</td><td class="num">0.33</td><td class="num">1</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="grid two narrow">
+          <figure><img src="../media/images/proj3/web/sec1.1_t0.25.jpg" alt="Noisy input at t = 0.25" loading="lazy"><figcaption><span class="name">Noisy input · t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.2_blur_t0.25.jpg" alt="Gaussian-blurred estimate at t = 0.25, sigma 4" loading="lazy"><figcaption><span class="name">Gaussian blur · &sigma; = 4</span>Saturated color blotches; only a pale vertical smear marks the tower.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.1_t0.50.jpg" alt="Noisy input at t = 0.50" loading="lazy"><figcaption><span class="name">Noisy input · t = 0.50</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.2_blur_t0.50.jpg" alt="Gaussian-blurred estimate at t = 0.50, sigma 2" loading="lazy"><figcaption><span class="name">Gaussian blur · &sigma; = 2</span>Tower and branches read clearly, but mottled color covers everything.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.1_t0.75.jpg" alt="Noisy input at t = 0.75" loading="lazy"><figcaption><span class="name">Noisy input · t = 0.75</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.2_blur_t0.75.jpg" alt="Gaussian-blurred estimate at t = 0.75, sigma 1" loading="lazy"><figcaption><span class="name">Gaussian blur · &sigma; = 1</span>The best of the three, though still grainy and softer than the original.</figcaption></figure>
+        </div>
+        <div class="callout">
+          <h3>Why blur struggles</h3>
+          <p>The best &sigma; grows as the noise grows (1 &rarr; 2 &rarr; 4), and that is the whole trade-off: a blur cannot tell noise from detail, so removing more noise also removes more of the picture. At t = 0.25 the noise is three times stronger than the image, and even &sigma; = 4 leaves plenty behind. What remains is correlated over a few pixels, so it shows up as color blotches rather than fine grain.</p>
+        </div>
+      </div>
+
+      <!-- ---------- 1.3 ---------- -->
+      <div id="s13" class="sub">
+        <span class="sec-num">1.3</span>
+        <h3 class="subh">One-step denoising</h3>
+        <div class="prose">
+          <p>The flow model is a much better denoiser. <code>predict_velocity</code> estimates which way the clean image lies from x<sub>t</sub>, and walking the remaining distance along that single direction gives a one-step estimate:</p>
+          <div class="eq">x&#770;<sub>1</sub> = x<sub>t</sub> + (1 &minus; t)&middot;v<sub>&theta;</sub>(x<sub>t</sub>, t, c)</div>
+          <p><code>one_step_denoise</code> is exactly that line, with one network call per input. The predicted velocity has the same shape (1&times;3&times;512&times;512), dtype (float32) and device as the input, and every value is finite.</p>
+        </div>
+        <div class="grid three">
+          <figure><img src="../media/images/proj3/web/sec1.1_t0.25.jpg" alt="Noisy input at t = 0.25" loading="lazy"><figcaption><span class="name">Noisy input · t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.3_onestep_t0.25.jpg" alt="One-step estimate from t = 0.25" loading="lazy"><figcaption><span class="name">One-step estimate · t = 0.25</span>Clean but airbrushed: layout and colors are right, while the clock, thin twigs, and stone texture are gone.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1_original.jpg" alt="Original image" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.1_t0.50.jpg" alt="Noisy input at t = 0.50" loading="lazy"><figcaption><span class="name">Noisy input · t = 0.50</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.3_onestep_t0.50.jpg" alt="One-step estimate from t = 0.50" loading="lazy"><figcaption><span class="name">One-step estimate · t = 0.50</span>The clock and belfry return; the finest twigs are still soft.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1_original.jpg" alt="Original image" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.1_t0.75.jpg" alt="Noisy input at t = 0.75" loading="lazy"><figcaption><span class="name">Noisy input · t = 0.75</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.3_onestep_t0.75.jpg" alt="One-step estimate from t = 0.75" loading="lazy"><figcaption><span class="name">One-step estimate · t = 0.75</span>Nearly indistinguishable from the original at this size.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1_original.jpg" alt="Original image" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+        </div>
+        <div class="callout">
+          <h3>Why one step is blurry at high noise</h3>
+          <p>The path gives x<sub>1</sub> = x<sub>t</sub> + (1 &minus; t)(x<sub>1</sub> &minus; x<sub>0</sub>) exactly, and the network is trained with squared error to predict x<sub>1</sub> &minus; x<sub>0</sub>. So the one-step estimate is the model's guess at the <strong>average</strong> of every clean image consistent with x<sub>t</sub>, i.e. E[x<sub>1</sub> | x<sub>t</sub>]. When the noise is heavy, many differently detailed images fit, and their average is smooth.</p>
+          <p>Unlike the blur, though, this is an average over <em>plausible images</em>: the model knows what towers, trees and sky look like, so it removes the noise without leaving color blotches behind.</p>
+        </div>
+      </div>
+
+      <!-- ---------- 1.4 ---------- -->
+      <div id="s14" class="sub">
+        <span class="sec-num">1.4</span>
+        <h3 class="subh">Visualizing velocity</h3>
+        <div class="prose">
+          <p>In 1.3 the model added (1 &minus; t)&middot;v&#770;<sub>t</sub> to the noisy image. Because I know both the clean image and the exact noise, I also know what <em>should</em> have been added:</p>
+          <div class="eq">v<sub>gt</sub> = x<sub>1</sub> &minus; &epsilon;,&nbsp;&nbsp;&nbsp; (1 &minus; t)&middot;v<sub>gt</sub> = x<sub>1</sub> &minus; x<sub>t</sub></div>
+          <p>For each time I compute the predicted update, the ground-truth update, and a per-pixel error: the root-mean-square difference over the three color channels, computed before any display scaling.</p>
+          <div class="eq">E<sub>t</sub> = &radic;( mean<sub>RGB</sub>( [ (1 &minus; t)(v&#770;<sub>t</sub> &minus; v<sub>gt</sub>) ]&sup2; ) )</div>
+        </div>
+        <div class="split">
+          <figure><img src="../media/images/proj3/web/sec1_original.jpg" alt="Original image" loading="lazy"><figcaption><span class="name">Original x<sub>1</sub></span>The target for every update below.</figcaption></figure>
+          <div class="callout">
+            <h3>How to read the panels</h3>
+            <p>Each row shows the noisy input, the predicted update, the ground-truth update, and the error heatmap.</p>
+            <p><strong>Updates</strong> are signed, so all six share one symmetric RGB scale of &plusmn;2.14 with zero at mid-gray. The limit is the 99.5th percentile of |update| over all six panels, so the brightest values saturate.</p>
+            <p><strong>Heatmaps</strong> share one linear scale from 0 to 0.58, the 99th percentile of all three maps, so the three times can be compared directly.</p>
+          </div>
+        </div>
+        <div class="grid">
+          <figure class="wide"><img src="../media/images/proj3/web/sec1.4_velocity_t0.25.jpg" alt="Velocity visualization at t = 0.25: noisy image, predicted update, ground-truth update, error heatmap" loading="lazy"><figcaption><span class="name">t = 0.25</span>The error traces every branch, the tower's edges, the clock and belfry.</figcaption></figure>
+          <figure class="wide"><img src="../media/images/proj3/web/sec1.4_velocity_t0.50.jpg" alt="Velocity visualization at t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span>Same structure, weaker: the error now lives mostly in the dense branches.</figcaption></figure>
+          <figure class="wide"><img src="../media/images/proj3/web/sec1.4_velocity_t0.75.jpg" alt="Velocity visualization at t = 0.75" loading="lazy"><figcaption><span class="name">t = 0.75</span>Only faint speckle over the textured regions remains.</figcaption></figure>
+        </div>
+        <div class="callout ok">
+          <h3>What the error shows</h3>
+          <p>The error term is exactly the one-step error from 1.3: <strong>(1 &minus; t)(v&#770;<sub>t</sub> &minus; v<sub>gt</sub>) = x&#770;<sub>1</sub> &minus; x<sub>1</sub></strong>. So the heatmap shows where the one-step estimate went wrong, and it matches what I saw there. At t = 0.25 the error follows the image's fine structure (every branch, the tower's edges, the clock and belfry, the benches), while the flat sky and the bright sun flare stay near zero. Those are the places where many different details are consistent with the noise. As t grows the error fades and loses that structure.</p>
+          <table class="stats">
+            <thead><tr><th><span class="sym">t</span></th><th>Mean per-pixel RMS error</th></tr></thead>
+            <tbody>
+              <tr><td class="num">0.25</td><td class="num">0.152</td></tr>
+              <tr><td class="num">0.50</td><td class="num">0.102</td></tr>
+              <tr><td class="num">0.75</td><td class="num">0.066</td></tr>
+            </tbody>
+          </table>
+          <p>The predicted and ground-truth updates look almost identical at a glance because both contain &minus;x<sub>t</sub>, and with it all of the noise; only the heatmap separates them. Both also fade toward gray as t grows: the closer x<sub>t</sub> is to the image, the less there is to add.</p>
+        </div>
+      </div>
+
+      <!-- ---------- 1.5 ---------- -->
+      <div id="s15" class="sub">
+        <span class="sec-num">1.5</span>
+        <h3 class="subh">Iterative denoising with Euler sampling</h3>
+        <div class="prose">
+          <p>One step uses a single velocity for the whole trip, but the velocity field changes along the way. Euler integration takes a small step, predicts again, and repeats:</p>
+          <div class="eq">x<sub>t+h</sub> = x<sub>t</sub> + h&middot;v<sub>&theta;</sub>(x<sub>t</sub>, t, c),&nbsp;&nbsp;&nbsp; h = 0.02</div>
+          <p>My <code>euler_sample</code> recomputes the velocity at every step, shortens the last step to <code>1 &minus; t</code> so it lands exactly on t = 1, and returns the final image plus the states at the start, after every fifth update, and at the end. To test it I used a constant velocity field v = 1, where the exact answer is known: starting from t = 0, 0.5 and 0.93 it makes <strong>50, 25 and 4</strong> velocity calls (the last a shortened 0.01 step) and ends at exactly 1 &minus; t<sub>start</sub>.</p>
+          <p>I then denoised the saved t = 0.50 input from 1.1 with h = 0.02, which takes 25 updates.</p>
+        </div>
+        <div class="grid three">
+          <figure><img src="../media/images/proj3/web/sec1.5_traj_t0.50.jpg" alt="Euler trajectory at t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span>Start: the saved noisy input.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.5_traj_t0.60.jpg" alt="Euler trajectory at t = 0.60" loading="lazy"><figcaption><span class="name">t = 0.60</span>Grain is still heavy.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.5_traj_t0.70.jpg" alt="Euler trajectory at t = 0.70" loading="lazy"><figcaption><span class="name">t = 0.70</span>Grain fading; the tower's edges sharpen.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.5_traj_t0.80.jpg" alt="Euler trajectory at t = 0.80" loading="lazy"><figcaption><span class="name">t = 0.80</span>Mostly clean; light grain left in the sky.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.5_traj_t0.90.jpg" alt="Euler trajectory at t = 0.90" loading="lazy"><figcaption><span class="name">t = 0.90</span>Nearly clean.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.5_traj_t1.00.jpg" alt="Euler trajectory at t = 1.00" loading="lazy"><figcaption><span class="name">t = 1.00</span>Final: sharp, thin twigs included.</figcaption></figure>
+        </div>
+
+        <h4 style="font-family:var(--serif);font-size:1.1rem;margin:2rem 0 .3rem">Comparing the three denoisers on the same t = 0.50 input</h4>
+        <div class="grid four">
+          <figure><img src="../media/images/proj3/web/sec1_original.jpg" alt="Original image" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.2_blur_t0.50.jpg" alt="Gaussian blur estimate from t = 0.50" loading="lazy"><figcaption><span class="name">Gaussian blur · &sigma; = 2</span>Section 1.2.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.3_onestep_t0.50.jpg" alt="One-step estimate from t = 0.50" loading="lazy"><figcaption><span class="name">One-step estimate</span>Section 1.3.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.5_traj_t1.00.jpg" alt="Euler result from t = 0.50" loading="lazy"><figcaption><span class="name">Euler · 25 steps</span>This section.</figcaption></figure>
+        </div>
+        <div class="grid three">
+          <figure><img src="../media/images/proj3/web/sec1.5_zoom_original.jpg" alt="2x zoom of the original: clock face and upper-right twigs" loading="lazy"><figcaption><span class="name">2&times; detail · original</span>The real twigs and clock hands.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.5_zoom_onestep.jpg" alt="2x zoom of the one-step estimate" loading="lazy"><figcaption><span class="name">2&times; detail · one step</span>Smooth: thick, blurred twigs and no stone texture.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.5_zoom_euler.jpg" alt="2x zoom of the Euler result" loading="lazy"><figcaption><span class="name">2&times; detail · Euler</span>Sharp again, but the finest twigs and the clock hands are redrawn, not recovered.</figcaption></figure>
+        </div>
+        <div class="callout ok">
+          <h3>Average versus commitment</h3>
+          <p>The blur keeps the noise as color blotches and softens every edge. The one-step estimate is clean but soft, for the averaging reason from 1.3. <strong>Euler is clearly the sharpest</strong> and the only result with crisp twigs and stone texture: each step removes a little noise and asks the model again, and as the image clears the model becomes confident enough to commit to specific detail instead of averaging over all the possibilities.</p>
+          <p>The zoom shows the catch. Euler's twigs follow the original's main branches, but the thinnest twigs and the clock hands are not the original ones. That detail was buried in the noise at t = 0.5, so the sampler drew a plausible version of it. The one-step result is a safe average; Euler is a sharp, believable guess.</p>
+        </div>
+      </div>
+
+      <!-- ---------- 1.6 ---------- -->
+      <div id="s16" class="sub">
+        <span class="sec-num">1.6</span>
+        <h3 class="subh">Generating images from noise</h3>
+        <div class="prose">
+          <p>Starting <code>euler_sample</code> at t = 0 from pure Gaussian noise denoises noise into a brand-new image. I drew five noise tensors (seeds 180&ndash;184) and integrated each from 0 to 1 in 50 Euler steps with <code>"a high quality photo"</code> and no guidance.</p>
+        </div>
+        <div class="grid five">
+          <figure><img src="../media/images/proj3/web/sec1.6_seed180.jpg" alt="Sample from seed 180" loading="lazy"><figcaption><span class="name">Seed 180</span>The face is missing, smeared into the hair.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.6_seed181.jpg" alt="Sample from seed 181" loading="lazy"><figcaption><span class="name">Seed 181</span>Plausible face; warped torso and skin.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.6_seed182.jpg" alt="Sample from seed 182" loading="lazy"><figcaption><span class="name">Seed 182</span>A convincing studio portrait.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.6_seed183.jpg" alt="Sample from seed 183" loading="lazy"><figcaption><span class="name">Seed 183</span>A badly distorted face.</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.6_seed184.jpg" alt="Sample from seed 184" loading="lazy"><figcaption><span class="name">Seed 184</span>A convincing studio portrait.</figcaption></figure>
+        </div>
+        <div class="callout">
+          <h3>What I observed</h3>
+          <p><strong>All five samples are portraits of people</strong>, so this generic prompt clearly favors that subject for this model. Quality is inconsistent: two of the five (seeds 182 and 184) look like real studio photos, while the other three have melted or distorted faces and bodies. With only the conditional velocity, the prompt is weakly enforced and anatomy is unreliable. Classifier-free guidance in Section 2 strengthens the prompt to address exactly this.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== SECTION 2 =================== -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-num">Section 2</span>
+        <h2>Conditional generation and guidance</h2>
+        <p>Section 1 conditioned on a fixed prompt, but the samples in 1.6 followed it only loosely. Classifier-free guidance makes the model take the prompt more seriously.</p>
+      </div>
+
+      <div id="s21">
+        <span class="sec-num">2.1</span>
+        <h3 class="subh">Classifier-free guidance (CFG)</h3>
+        <div class="prose">
+          <p>At every step I evaluate the model twice on the <strong>same</strong> x<sub>t</sub> and t: once with the prompt (v<sub>c</sub>) and once with the empty prompt <code>""</code> (v<sub>u</sub>). Their difference is the part of the velocity that comes from the prompt, and CFG pushes further in that direction:</p>
+          <div class="eq">v<sub>cfg</sub> = v<sub>c</sub> + w&middot;(v<sub>c</sub> &minus; v<sub>u</sub>),&nbsp;&nbsp;&nbsp; w = 7</div>
+          <p><code>cfg_velocity</code> computes each prediction once and combines them; with w = 0 it returns the conditional prediction exactly (checked with <code>torch.equal</code>). I reran the five seeds from 1.6 with the same initial noise, 50 Euler steps and h = 0.02, swapping the plain conditional velocity for v<sub>cfg</sub>.</p>
+        </div>
+        <h4 class="case">Without guidance (Section 1.6)</h4>
+        <div class="grid five sweep">
+          <figure><img src="../media/images/proj3/web/sec1.6_seed180.jpg" alt="Unguided sample, seed 180" loading="lazy"><figcaption><span class="name">Seed 180</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.6_seed181.jpg" alt="Unguided sample, seed 181" loading="lazy"><figcaption><span class="name">Seed 181</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.6_seed182.jpg" alt="Unguided sample, seed 182" loading="lazy"><figcaption><span class="name">Seed 182</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.6_seed183.jpg" alt="Unguided sample, seed 183" loading="lazy"><figcaption><span class="name">Seed 183</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec1.6_seed184.jpg" alt="Unguided sample, seed 184" loading="lazy"><figcaption><span class="name">Seed 184</span></figcaption></figure>
+        </div>
+        <h4 class="case">With CFG, w = 7</h4>
+        <div class="grid five sweep">
+          <figure><img src="../media/images/proj3/web/sec2.1_cfg_seed180.jpg" alt="CFG sample, seed 180, w = 7" loading="lazy"><figcaption><span class="name">Seed 180</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec2.1_cfg_seed181.jpg" alt="CFG sample, seed 181, w = 7" loading="lazy"><figcaption><span class="name">Seed 181</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec2.1_cfg_seed182.jpg" alt="CFG sample, seed 182, w = 7" loading="lazy"><figcaption><span class="name">Seed 182</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec2.1_cfg_seed183.jpg" alt="CFG sample, seed 183, w = 7" loading="lazy"><figcaption><span class="name">Seed 183</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec2.1_cfg_seed184.jpg" alt="CFG sample, seed 184, w = 7" loading="lazy"><figcaption><span class="name">Seed 184</span></figcaption></figure>
+        </div>
+        <div class="callout ok">
+          <h3>Quality up, diversity down</h3>
+          <p>Every guided sample is a clean, sharp, well-lit studio headshot with coherent anatomy: the missing face of seed 180 and the distorted face of seed 183 are gone. Guidance also makes the samples more alike. All five are now centered, front-facing head-and-shoulders portraits against a plain backdrop, with stronger contrast than before.</p>
+          <p>The initial noise still sets the layout. Each seed keeps roughly the background tone of its unguided version, and seed 182 keeps its raised hand. CFG changes how strictly the model follows the prompt, not where the image starts.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== SECTION 3 =================== -->
+    <section>
+      <div class="sec-head">
+        <span class="sec-num">Section 3</span>
+        <h2>Creative applications</h2>
+        <p>The same guided sampler, pointed at new jobs: editing existing images, then combining two prompts into optical illusions. Throughout, h = 0.02, w = 7, and the unconditional branch uses the empty prompt.</p>
+      </div>
+
+      <!-- ---------- 3.1 ---------- -->
+      <div id="s31">
+        <span class="sec-num">3.1</span>
+        <h3 class="subh">Image-to-image editing</h3>
+        <div class="prose">
+          <p>Section 1.5 showed that noising an image and denoising it again brings back something close to the original. Loosening "close" turns the same move into an editor, the idea behind SDEdit: noise the image to a starting time t<sub>start</sub>, then let the guided sampler carry it back to t = 1. The model has to invent whatever the noise destroyed, and with the prompt <code>"a high quality photo"</code> it invents things that look like photographs.</p>
+          <div class="eq">x<sub>start</sub> = (1 &minus; t<sub>start</sub>)&middot;&epsilon; + t<sub>start</sub>&middot;x<sub>1</sub>&nbsp;&nbsp; &rarr; &nbsp;&nbsp;Euler with v<sub>cfg</sub> to t = 1</div>
+          <p><code>edit</code> does exactly this, with the same shortened last step as <code>euler_sample</code> (t<sub>start</sub> = 0.25 takes 37 full steps and one 0.01 step). Every edit uses the same noise (seed 180), so the only thing changing along a row is how much of it is mixed in. <strong>Smaller t<sub>start</sub> means more noise and a bigger edit.</strong></p>
+        </div>
+        <h4 class="case">Campanile (provided)</h4>
+        <div class="grid four sweep">
+          <figure><img src="../media/images/proj3/web/sec3.1_campanile_orig.jpg" alt="Campanile, original input" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_campanile_t0.02.jpg" alt="Campanile, edited from t = 0.02" loading="lazy"><figcaption><span class="name">t = 0.02</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_campanile_t0.04.jpg" alt="Campanile, edited from t = 0.04" loading="lazy"><figcaption><span class="name">t = 0.04</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_campanile_t0.06.jpg" alt="Campanile, edited from t = 0.06" loading="lazy"><figcaption><span class="name">t = 0.06</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_campanile_t0.10.jpg" alt="Campanile, edited from t = 0.10" loading="lazy"><figcaption><span class="name">t = 0.10</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_campanile_t0.14.jpg" alt="Campanile, edited from t = 0.14" loading="lazy"><figcaption><span class="name">t = 0.14</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_campanile_t0.25.jpg" alt="Campanile, edited from t = 0.25" loading="lazy"><figcaption><span class="name">t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_campanile_t0.50.jpg" alt="Campanile, edited from t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span></figcaption></figure>
+        </div>
+        <p class="note">At t = 0.02 only a pale vertical shape against blue survives, and the sampler invents a smooth white column in front of a blurry backdrop. By t = 0.04&ndash;0.06 it is a tapering white tower under a clear sky with trees below, topped with invented details. A single dark belfry window appears at t = 0.10, the three arches and a small clock face come back at 0.25, and t = 0.50 matches the original down to the clock hands.</p>
+        <h4 class="case">My image 1: a Minecraft creeper face</h4>
+        <div class="grid four sweep">
+          <figure><img src="../media/images/proj3/web/sec3.1_creeper_orig.jpg" alt="Minecraft creeper face, original input" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_creeper_t0.02.jpg" alt="Minecraft creeper face, edited from t = 0.02" loading="lazy"><figcaption><span class="name">t = 0.02</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_creeper_t0.04.jpg" alt="Minecraft creeper face, edited from t = 0.04" loading="lazy"><figcaption><span class="name">t = 0.04</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_creeper_t0.06.jpg" alt="Minecraft creeper face, edited from t = 0.06" loading="lazy"><figcaption><span class="name">t = 0.06</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_creeper_t0.10.jpg" alt="Minecraft creeper face, edited from t = 0.10" loading="lazy"><figcaption><span class="name">t = 0.10</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_creeper_t0.14.jpg" alt="Minecraft creeper face, edited from t = 0.14" loading="lazy"><figcaption><span class="name">t = 0.14</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_creeper_t0.25.jpg" alt="Minecraft creeper face, edited from t = 0.25" loading="lazy"><figcaption><span class="name">t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_creeper_t0.50.jpg" alt="Minecraft creeper face, edited from t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span></figcaption></figure>
+        </div>
+        <p class="note">At low starting times the model never reads the pixel art as a face. At t = 0.02 the dark shape becomes a black picture frame on green, and at 0.04&ndash;0.06 a dark clay animal figurine. From t = 0.10 the face is back, but rendered as glossy black 3D blocks photographed against a green backdrop; it turns flat again at 0.25.</p>
+        <h4 class="case">My image 2: a Minecraft villager</h4>
+        <div class="grid four sweep">
+          <figure><img src="../media/images/proj3/web/sec3.1_villager_orig.jpg" alt="Minecraft villager, original input" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_villager_t0.02.jpg" alt="Minecraft villager, edited from t = 0.02" loading="lazy"><figcaption><span class="name">t = 0.02</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_villager_t0.04.jpg" alt="Minecraft villager, edited from t = 0.04" loading="lazy"><figcaption><span class="name">t = 0.04</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_villager_t0.06.jpg" alt="Minecraft villager, edited from t = 0.06" loading="lazy"><figcaption><span class="name">t = 0.06</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_villager_t0.10.jpg" alt="Minecraft villager, edited from t = 0.10" loading="lazy"><figcaption><span class="name">t = 0.10</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_villager_t0.14.jpg" alt="Minecraft villager, edited from t = 0.14" loading="lazy"><figcaption><span class="name">t = 0.14</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_villager_t0.25.jpg" alt="Minecraft villager, edited from t = 0.25" loading="lazy"><figcaption><span class="name">t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_villager_t0.50.jpg" alt="Minecraft villager, edited from t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span></figcaption></figure>
+        </div>
+        <p class="note">The skin-colored block head is read as a person. At t = 0.02 and 0.04 the sampler produces real portraits; at 0.06&ndash;0.10 the villager's brow and green eyes survive as objects held in front of someone's T-shirt, and at 0.14 the block head is back with a real hand over the nose. From t = 0.25 it is the villager again, as a smoothly shaded 3D head.</p>
+
+        <h4 class="case" style="margin-top:3rem">Web and hand-drawn images</h4>
+        <div class="prose"><p>This works especially well on non-photographic inputs, which the sampler pulls onto the manifold of natural images. I edited one image from the web and two drawings with the same seven starting times.</p></div>
+        <h4 class="case">Web image: a cartoon dragon</h4>
+        <div class="grid four sweep">
+          <figure><img src="../media/images/proj3/web/sec3.1_dragon_orig.jpg" alt="Cartoon dragon from the web, original input" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dragon_t0.02.jpg" alt="Cartoon dragon from the web, edited from t = 0.02" loading="lazy"><figcaption><span class="name">t = 0.02</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dragon_t0.04.jpg" alt="Cartoon dragon from the web, edited from t = 0.04" loading="lazy"><figcaption><span class="name">t = 0.04</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dragon_t0.06.jpg" alt="Cartoon dragon from the web, edited from t = 0.06" loading="lazy"><figcaption><span class="name">t = 0.06</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dragon_t0.10.jpg" alt="Cartoon dragon from the web, edited from t = 0.10" loading="lazy"><figcaption><span class="name">t = 0.10</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dragon_t0.14.jpg" alt="Cartoon dragon from the web, edited from t = 0.14" loading="lazy"><figcaption><span class="name">t = 0.14</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dragon_t0.25.jpg" alt="Cartoon dragon from the web, edited from t = 0.25" loading="lazy"><figcaption><span class="name">t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dragon_t0.50.jpg" alt="Cartoon dragon from the web, edited from t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span></figcaption></figure>
+        </div>
+        <p class="note">At t = 0.02&ndash;0.06 only the pink-and-red palette survives: a peach, rose-like object, pink felt shapes, then a fluffy pink cat. At t = 0.10 a round red cartoon creature with the dragon's eyes appears, at 0.14 a dragon with garbled text underneath, and from 0.25 the dragon is essentially unchanged, heart bubble included.</p>
+        <h4 class="case">Hand-drawn image 1: a cat</h4>
+        <div class="grid four sweep">
+          <figure><img src="../media/images/proj3/web/sec3.1_cat_orig.jpg" alt="Cat line drawing, original input" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_cat_t0.02.jpg" alt="Cat line drawing, edited from t = 0.02" loading="lazy"><figcaption><span class="name">t = 0.02</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_cat_t0.04.jpg" alt="Cat line drawing, edited from t = 0.04" loading="lazy"><figcaption><span class="name">t = 0.04</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_cat_t0.06.jpg" alt="Cat line drawing, edited from t = 0.06" loading="lazy"><figcaption><span class="name">t = 0.06</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_cat_t0.10.jpg" alt="Cat line drawing, edited from t = 0.10" loading="lazy"><figcaption><span class="name">t = 0.10</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_cat_t0.14.jpg" alt="Cat line drawing, edited from t = 0.14" loading="lazy"><figcaption><span class="name">t = 0.14</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_cat_t0.25.jpg" alt="Cat line drawing, edited from t = 0.25" loading="lazy"><figcaption><span class="name">t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_cat_t0.50.jpg" alt="Cat line drawing, edited from t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span></figcaption></figure>
+        </div>
+        <p class="note">The cat is small and drawn with thin lines, which gives the sampler very little to hold on to. At t = 0.02 it makes a grey box on a shelf, at 0.04&ndash;0.06 the strokes turn into embossed letter shapes, and at 0.10 into a little robot doodle with an antenna. The cat is back from t = 0.14.</p>
+        <h4 class="case">Hand-drawn image 2: a dog</h4>
+        <div class="grid four sweep">
+          <figure><img src="../media/images/proj3/web/sec3.1_dog_orig.jpg" alt="Dog line drawing, original input" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dog_t0.02.jpg" alt="Dog line drawing, edited from t = 0.02" loading="lazy"><figcaption><span class="name">t = 0.02</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dog_t0.04.jpg" alt="Dog line drawing, edited from t = 0.04" loading="lazy"><figcaption><span class="name">t = 0.04</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dog_t0.06.jpg" alt="Dog line drawing, edited from t = 0.06" loading="lazy"><figcaption><span class="name">t = 0.06</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dog_t0.10.jpg" alt="Dog line drawing, edited from t = 0.10" loading="lazy"><figcaption><span class="name">t = 0.10</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dog_t0.14.jpg" alt="Dog line drawing, edited from t = 0.14" loading="lazy"><figcaption><span class="name">t = 0.14</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dog_t0.25.jpg" alt="Dog line drawing, edited from t = 0.25" loading="lazy"><figcaption><span class="name">t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.1_dog_t0.50.jpg" alt="Dog line drawing, edited from t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span></figcaption></figure>
+        </div>
+        <p class="note">Thick, bold outlines survive the noise much better. At t = 0.02 the sampler draws a dark round ring, and at 0.04 the dog's outline is already there but filled with a sculpted human face. From t = 0.06 the drawing is back, and only small details such as the nose and the collar tag change after that.</p>
+        <div class="callout ok">
+          <h3>How much noise it takes</h3>
+          <p>Each input has a starting time where it becomes recognizable again: the bold-lined dog by t = 0.06, the Campanile and the creeper layouts by 0.10, and the cat, the dragon and the villager by about 0.14. Fine details (the clock face, the dragon's heart bubble, the creeper's flat 2D look) need 0.25. Strong, high-contrast outlines survive more noise than thin lines or flat color fields.</p>
+          <p>Below that time the model keeps only the layout and the palette, and it pulls everything toward photographs: pixel art becomes glossy 3D blocks or a clay figurine, a skin-colored block head becomes a real person, and a line drawing becomes embossed letters.</p>
+        </div>
+      </div>
+
+      <!-- ---------- 3.2 ---------- -->
+      <div id="s32" class="sub">
+        <span class="sec-num">3.2</span>
+        <h3 class="subh">Text-guided image editing</h3>
+        <div class="prose">
+          <p>Same procedure and the same seven starting times, but the generic prompt is replaced by one that describes the edit, so the model fills in what the noise destroyed with the prompt's content. I used short prompts: <code>"sword"</code> for the Campanile, <code>"villager"</code> for the creeper, and <code>"cat"</code> for the villager.</p>
+        </div>
+        <h4 class="case">Campanile &rarr; “sword”</h4>
+        <div class="grid four sweep">
+          <figure><img src="../media/images/proj3/web/sec3.1_campanile_orig.jpg" alt="Campanile with prompt sword, original input" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_campanile_t0.02.jpg" alt="Campanile with prompt sword, edited from t = 0.02" loading="lazy"><figcaption><span class="name">t = 0.02</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_campanile_t0.04.jpg" alt="Campanile with prompt sword, edited from t = 0.04" loading="lazy"><figcaption><span class="name">t = 0.04</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_campanile_t0.06.jpg" alt="Campanile with prompt sword, edited from t = 0.06" loading="lazy"><figcaption><span class="name">t = 0.06</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_campanile_t0.10.jpg" alt="Campanile with prompt sword, edited from t = 0.10" loading="lazy"><figcaption><span class="name">t = 0.10</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_campanile_t0.14.jpg" alt="Campanile with prompt sword, edited from t = 0.14" loading="lazy"><figcaption><span class="name">t = 0.14</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_campanile_t0.25.jpg" alt="Campanile with prompt sword, edited from t = 0.25" loading="lazy"><figcaption><span class="name">t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_campanile_t0.50.jpg" alt="Campanile with prompt sword, edited from t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span></figcaption></figure>
+        </div>
+        <p class="note">The one-word prompt barely registers: across all seven starting times the result stays a tower. Its tall, tapering white shape already resembles a blade, and the closest it gets to a sword is the teal, ornamented, hilt-like top at t = 0.04&ndash;0.06.</p>
+        <h4 class="case">Creeper &rarr; “villager”</h4>
+        <div class="grid four sweep">
+          <figure><img src="../media/images/proj3/web/sec3.1_creeper_orig.jpg" alt="Creeper with prompt villager, original input" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_creeper_t0.02.jpg" alt="Creeper with prompt villager, edited from t = 0.02" loading="lazy"><figcaption><span class="name">t = 0.02</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_creeper_t0.04.jpg" alt="Creeper with prompt villager, edited from t = 0.04" loading="lazy"><figcaption><span class="name">t = 0.04</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_creeper_t0.06.jpg" alt="Creeper with prompt villager, edited from t = 0.06" loading="lazy"><figcaption><span class="name">t = 0.06</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_creeper_t0.10.jpg" alt="Creeper with prompt villager, edited from t = 0.10" loading="lazy"><figcaption><span class="name">t = 0.10</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_creeper_t0.14.jpg" alt="Creeper with prompt villager, edited from t = 0.14" loading="lazy"><figcaption><span class="name">t = 0.14</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_creeper_t0.25.jpg" alt="Creeper with prompt villager, edited from t = 0.25" loading="lazy"><figcaption><span class="name">t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_creeper_t0.50.jpg" alt="Creeper with prompt villager, edited from t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span></figcaption></figure>
+        </div>
+        <p class="note">This prompt takes. At t = 0.02&ndash;0.06 the model paints a robed, medieval-looking villager on the creeper's green background, turning the dark mass of the face into a cloak (a villager in the everyday sense, not Minecraft's). At t = 0.10 the figure's hood sits on top of the creeper's mouth, and from 0.14 the creeper wins.</p>
+        <h4 class="case">Villager &rarr; “cat”</h4>
+        <div class="grid four sweep">
+          <figure><img src="../media/images/proj3/web/sec3.1_villager_orig.jpg" alt="Villager with prompt cat, original input" loading="lazy"><figcaption><span class="name">Original</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_villager_t0.02.jpg" alt="Villager with prompt cat, edited from t = 0.02" loading="lazy"><figcaption><span class="name">t = 0.02</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_villager_t0.04.jpg" alt="Villager with prompt cat, edited from t = 0.04" loading="lazy"><figcaption><span class="name">t = 0.04</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_villager_t0.06.jpg" alt="Villager with prompt cat, edited from t = 0.06" loading="lazy"><figcaption><span class="name">t = 0.06</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_villager_t0.10.jpg" alt="Villager with prompt cat, edited from t = 0.10" loading="lazy"><figcaption><span class="name">t = 0.10</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_villager_t0.14.jpg" alt="Villager with prompt cat, edited from t = 0.14" loading="lazy"><figcaption><span class="name">t = 0.14</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_villager_t0.25.jpg" alt="Villager with prompt cat, edited from t = 0.25" loading="lazy"><figcaption><span class="name">t = 0.25</span></figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.2_villager_t0.50.jpg" alt="Villager with prompt cat, edited from t = 0.50" loading="lazy"><figcaption><span class="name">t = 0.50</span></figcaption></figure>
+        </div>
+        <p class="note">No cat appears; the prompt changes the style instead. t = 0.02 is a watercolor fantasy illustration whose only cat-like hint is a large fluffy tail, 0.04 a watercolor head in profile, and at 0.06&ndash;0.14 the villager's head fills with painted flowers and leaves. From t = 0.25 the villager is back.</p>
+        <div class="callout">
+          <h3>Prompt strength versus preservation</h3>
+          <p>Small starting times give the prompt the most room and large ones preserve the input; the interesting range is in between (about 0.04&ndash;0.14), where the result keeps the input's layout but takes on the prompt. Only "villager" really took. "Sword" and "cat" changed the style and small details but not the subject: a bare one-word prompt gives the model little to work with, and a fuller description of the target (like "a photograph of &hellip;") would likely be needed for a stronger edit.</p>
+        </div>
+      </div>
+
+      <!-- ---------- 3.3 ---------- -->
+      <div id="s33" class="sub">
+        <span class="sec-num">3.3</span>
+        <h3 class="subh">Visual anagrams</h3>
+        <div class="prose">
+          <p>A visual anagram looks like one thing upright and another when rotated 180&deg;. At each step I denoise x<sub>t</sub> with prompt p<sub>1</sub>, and the rotated x<sub>t</sub> with prompt p<sub>2</sub>, rotate that second velocity back, and average the two:</p>
+          <div class="eq">v<sub>1</sub> = v<sub>cfg</sub>(x<sub>t</sub>, t, p<sub>1</sub>)<br>v<sub>2</sub> = flip( v<sub>cfg</sub>( flip(x<sub>t</sub>), t, p<sub>2</sub> ) )<br>v = (v<sub>1</sub> + v<sub>2</sub>) / 2</div>
+          <p><code>flip</code> rotates by 180&deg;, flipping <em>both</em> spatial axes. Every Euler step therefore has to satisfy both prompts at once. <code>visual_anagrams</code> runs this from pure noise (seeds 180 and 181) for 50 steps.</p>
+        </div>
+        <h4 class="case">Ring / Golden Gate Bridge</h4>
+        <div class="grid two narrow">
+          <figure><img src="../media/images/proj3/web/sec3.3_anagram1_upright.jpg" alt="Anagram 1 upright" loading="lazy"><figcaption><span class="name">Upright</span>&ldquo;an oil painting of ring&rdquo;</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.3_anagram1_rotated.jpg" alt="Anagram 1 rotated 180 degrees" loading="lazy"><figcaption><span class="name">Rotated 180&deg;</span>&ldquo;an oil painting of Golden Gate Bridge&rdquo;</figcaption></figure>
+        </div>
+        <p class="note">Only half works. Rotated, it is a clear Golden Gate Bridge framed by dark cliffs. Upright, the &ldquo;ring&rdquo; is just a faint oval of light in the clouds, and the bridge simply hangs upside down.</p>
+        <h4 class="case">Dog / policeman</h4>
+        <div class="grid two narrow">
+          <figure><img src="../media/images/proj3/web/sec3.3_anagram2_upright.jpg" alt="Anagram 2 upright" loading="lazy"><figcaption><span class="name">Upright</span>&ldquo;a lithograph of a dog in the field&rdquo;</figcaption></figure>
+          <figure><img src="../media/images/proj3/web/sec3.3_anagram2_rotated.jpg" alt="Anagram 2 rotated 180 degrees" loading="lazy"><figcaption><span class="name">Rotated 180&deg;</span>&ldquo;a lithograph of a policeman&rdquo;</figcaption></figure>
+        </div>
+        <p class="note">This one works. Upright it is a shaggy dog sitting in tall grass; rotated, the dog's body becomes a policeman's face under a peaked cap, with the dog's head still visible upside down at the bottom.</p>
+        <div class="callout">
+          <h3>What makes a pair work</h3>
+          <p>Both views are built from the same pixels, so the two subjects have to share one layout. A dark, roughly oval mass in a textured field can read as a shaggy dog one way up and a face under a cap the other way, so that pair succeeds. In the first pair the bridge's towers and cables dominated both orientations, and the thin, simple ring never formed beyond a faint oval.</p>
+        </div>
+      </div>
+
+      <!-- ---------- 3.4 ---------- -->
+      <div id="s34" class="sub">
+        <span class="sec-num">3.4</span>
+        <h3 class="subh">Hybrid images</h3>
+        <div class="prose">
+          <p>Hybrid images, as in Project 2 and adapted from Factorized Diffusion, mix two prompts by frequency instead of by orientation. At each step I predict two guided velocities from the same x<sub>t</sub> and t, then keep the low frequencies of one and the high frequencies of the other:</p>
+          <div class="eq">v = G<sub>&sigma;</sub>(v<sub>1</sub>) + ( v<sub>2</sub> &minus; G<sub>&sigma;</sub>(v<sub>2</sub>) ),&nbsp;&nbsp;&nbsp; &sigma; = 16, kernel 265&times;265</div>
+          <p>The high-pass is the prediction minus its blur, so the two parts split the spectrum and their sum is a full-size velocity, used directly in the Euler update. p<sub>1</sub> sets what you see from far away and p<sub>2</sub> what you see up close. Each result is shown at full size and at 64&times;64 to simulate distance.</p>
+        </div>
+        <div class="grid hybrid">
+          <figure><img src="../media/images/proj3/web/sec3.4_hybrid1.jpg" alt="Hybrid 1 at full size: a waterfall painting" loading="lazy"><figcaption><span class="name">Close</span>&ldquo;an oil painting of a waterfall&rdquo;</figcaption></figure>
+          <figure><div class="far"><img src="../media/images/proj3/web/sec3.4_hybrid1_64.png" alt="Hybrid 1 at 64 by 64 pixels" loading="lazy"></div><figcaption><span class="name">Distant (64&times;64)</span>&ldquo;an oil painting of an early morning sky&rdquo;</figcaption></figure>
+        </div>
+        <p class="note">Up close it is an expressive painting of a waterfall: white vertical streaks against deep blue, over rocks and a glowing golden pool. At 64 px the streaks merge and it reads as a dawn sky, deep blue above with a bright glow and a band of gold at the horizon. It works partly because a sky needs nothing but a color gradient; the broad waterfall streaks are still faintly visible even at 64 px.</p>
+        <div class="grid hybrid">
+          <figure><img src="../media/images/proj3/web/sec3.4_hybrid2.jpg" alt="Hybrid 2 at full size: a sepia rocket sketch" loading="lazy"><figcaption><span class="name">Close</span>&ldquo;a lithograph of a rocket&rdquo;</figcaption></figure>
+          <figure><div class="far"><img src="../media/images/proj3/web/sec3.4_hybrid2_64.png" alt="Hybrid 2 at 64 by 64 pixels" loading="lazy"></div><figcaption><span class="name">Distant (64&times;64)</span>&ldquo;a lithograph of a dog&rdquo;</figcaption></figure>
+        </div>
+        <p class="note">Up close it is clearly a sepia rocket sketch. From far away the dog is weak: with some imagination the silhouette becomes an animal's head in profile (the upper-left fin as a snout, the porthole as an eye, the right fins as an ear), but the rocket still dominates.</p>
+        <div class="callout">
+          <h3>Picking hybrid prompts</h3>
+          <p>The distant prompt is carried entirely by low frequencies, the blurred shape and color layout, so it only works if that is enough to recognize the subject. A sky passes that test trivially, which is why the first hybrid reads well from afar but is not much of a surprise; a dog needs a specific silhouette, and here the rocket's outline won. A distant prompt with a strong, simple silhouette (a skull, a face) paired with a richly textured close prompt (a waterfall, a forest) should give the most convincing hybrids.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== REFLECTION =================== -->
+    <section id="reflection">
+      <div class="sec-head">
+        <span class="sec-num">Reflection</span>
+        <h2>What I took away</h2>
+      </div>
+      <div class="prose">
+        <p>Everything in this project is the same Euler loop, x &larr; x + h&middot;v, with a different velocity plugged in. One big step gives the average of all plausible images; many small steps commit to one. CFG extrapolates away from the unconditional prediction, editing starts the loop part-way along the path, anagrams average two velocities under a symmetry, and hybrids split two velocities by frequency. Because the sampler only needs <em>some</em> velocity at each step, combining two predictions is enough to satisfy two constraints at once.</p>
+        <p>The practical lessons were about the knobs. The starting time is a dial between faithfulness and invention, the guidance weight trades diversity for quality and prompt adherence, and wording matters: bare prompts like "sword" and "cat" barely moved the image, while the illusions only worked when both subjects could share one layout.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="back" href="../index.html">&larr; Back to portfolio</a>
+    <p>CS180: Intro to Computer Vision &amp; Computational Photography · Fall 2026</p>
+  </footer>
+</body>
+</html>
