@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Image Warping and Mosaicing</title>
+  <style>
+    :root {
+      --bg: #faf9f7;
+      --surface: #ffffff;
+      --ink: #1c1b1a;
+      --muted: #6b6864;
+      --line: #e7e4df;
+      --accent: #1d4ed8;
+      --accent-soft: #eef2ff;
+      --warn-soft: #fbeaea;
+      --warn-ink: #a23b2d;
+      --ok: #1e8b4e;
+      --shadow: 0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+      --radius: 14px;
+      --maxw: 1040px;
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --mono: "SF Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #14130f;
+        --surface: #1c1b18;
+        --ink: #ece9e3;
+        --muted: #a09c94;
+        --line: #302e29;
+        --accent: #8bb0ff;
+        --accent-soft: #1e2333;
+        --warn-soft: #2c1d1a;
+        --warn-ink: #e79a8c;
+        --ok: #58c489;
+        --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.5);
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0; background: var(--bg); color: var(--ink);
+      font-family: var(--sans); line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); }
+    img { max-width: 100%; }
+
+    /* ---------- Hero ---------- */
+    header.hero {
+      padding: 5.5rem 1.5rem 3rem; text-align: center;
+      background: radial-gradient(1100px 380px at 50% -120px, var(--accent-soft), transparent 70%);
+      border-bottom: 1px solid var(--line);
+    }
+    .eyebrow {
+      font-size: .8rem; letter-spacing: .18em; text-transform: uppercase;
+      color: var(--accent); font-weight: 600; margin: 0 0 1rem;
+    }
+    header.hero h1 {
+      font-family: var(--serif); font-weight: 600;
+      font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.1;
+      margin: 0 auto .8rem; max-width: 20ch; letter-spacing: -.01em; text-wrap: balance;
+    }
+    header.hero p.lede { color: var(--muted); font-size: 1.1rem; max-width: 56ch; margin: 0 auto 1.6rem; }
+    .byline { font-size: .95rem; color: var(--muted); }
+    .byline strong { color: var(--ink); font-weight: 600; }
+    nav.toc { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; margin-top: 2rem; }
+    nav.toc a {
+      text-decoration: none; font-size: .9rem; font-weight: 500; color: var(--ink);
+      background: var(--surface); border: 1px solid var(--line);
+      padding: .5rem 1rem; border-radius: 999px; transition: border-color .2s, transform .2s;
+    }
+    nav.toc a:hover { border-color: var(--accent); transform: translateY(-1px); }
+
+    /* ---------- Layout ---------- */
+    main { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem; }
+    section { padding: 4rem 0; border-bottom: 1px solid var(--line); }
+    section:last-child { border-bottom: none; }
+    .sub { margin-top: 3rem; }
+    .sec-head { max-width: 66ch; margin-bottom: 2rem; }
+    .sec-num {
+      display: inline-block; font-family: var(--serif); font-size: .95rem;
+      color: var(--accent); font-weight: 600; margin-bottom: .4rem;
+    }
+    h2 {
+      font-family: var(--serif); font-weight: 600;
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem); margin: 0 0 .6rem;
+      letter-spacing: -.01em; text-wrap: balance;
+    }
+    h3.subh { font-family: var(--serif); font-size: 1.3rem; margin: 0 0 .8rem; }
+    .sec-head p { color: var(--muted); margin: 0; font-size: 1.05rem; }
+    .prose { max-width: 66ch; }
+    .prose p { margin: 0 0 1rem; }
+    .prose strong { color: var(--ink); }
+    .prose ul { max-width: 66ch; color: var(--ink); padding-left: 1.1rem; }
+    .prose li { margin: .3rem 0; }
+    code {
+      font-family: var(--mono); font-size: .86em; background: var(--accent-soft);
+      color: var(--accent); padding: .1rem .4rem; border-radius: 5px;
+    }
+    .eq {
+      font-family: var(--mono); font-size: .95rem; background: var(--surface);
+      border: 1px solid var(--line); border-radius: 10px; padding: 1rem 1.2rem;
+      margin: 1.2rem 0; overflow-x: auto; color: var(--ink);
+    }
+
+    /* ---------- Grids ---------- */
+    .grid { display: grid; gap: 1.2rem; margin-top: 1.6rem; }
+    .grid.five { grid-template-columns: repeat(5, 1fr); }
+    .grid.four { grid-template-columns: repeat(4, 1fr); }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .grid.two { grid-template-columns: repeat(2, 1fr); }
+    .grid.gallery { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+    .narrow { max-width: 780px; }
+    @media (max-width: 820px) {
+      .grid.four { grid-template-columns: repeat(2, 1fr); }
+      .grid.five { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 760px) { .grid.three, .grid.gallery { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) {
+      .grid.three, .grid.two, .grid.four, .grid.gallery { grid-template-columns: 1fr; }
+      .grid.five { grid-template-columns: repeat(2, 1fr); }
+    }
+    figure {
+      margin: 0; background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow);
+      display: flex; flex-direction: column;
+    }
+    figure img { display: block; width: 100%; height: auto; background: var(--line); }
+    figure.contain img { object-fit: contain; }
+    figcaption { padding: .7rem .9rem .9rem; font-size: .88rem; color: var(--muted); }
+    figcaption .name { font-weight: 600; color: var(--ink); font-size: .95rem; display: block; margin-bottom: .25rem; }
+    .wide img { width: 100%; }
+
+    /* Original image beside an explanation (1.4) */
+    .split {
+      display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+      gap: 1.2rem; align-items: start; margin-top: 1.6rem;
+    }
+    .split .callout { margin-top: 0; }
+    @media (max-width: 640px) { .split { grid-template-columns: 1fr; } }
+
+    /* ---------- Small number tables ---------- */
+    table.stats { border-collapse: collapse; margin: .4rem 0 1rem; font-size: .95rem; }
+    table.stats th, table.stats td { padding: .45rem 1.1rem .45rem 0; border-bottom: 1px solid var(--line); text-align: left; }
+    table.stats th { color: var(--muted); font-weight: 600; font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
+    table.stats td.num { font-family: var(--mono); font-size: .9rem; }
+    table.stats th .sym { text-transform: none; font-size: .95rem; }
+
+    /* ---------- Sweeps, cases, hybrids (Sections 2-3) ---------- */
+    .sweep figcaption { padding: .5rem .8rem .6rem; }
+    .sweep figcaption .name { margin-bottom: 0; }
+    h4.case { font-family: var(--serif); font-size: 1.1rem; margin: 2.2rem 0 .2rem; }
+    .note { max-width: 66ch; color: var(--muted); font-size: .95rem; margin: .9rem 0 0; }
+    .grid.hybrid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); max-width: 860px; }
+    @media (max-width: 560px) { .grid.hybrid { grid-template-columns: 1fr; } }
+    .far { flex: 1; min-height: 160px; display: flex; align-items: center; justify-content: center; background: var(--bg); }
+    figure .far img { width: 64px; height: 64px; background: none; }
+
+    /* ---------- Callout ---------- */
+    .callout {
+      margin-top: 2rem; background: var(--surface); border: 1px solid var(--line);
+      border-left: 3px solid var(--accent); border-radius: 10px;
+      padding: 1.3rem 1.5rem; box-shadow: var(--shadow);
+    }
+    .callout.ok { border-left-color: var(--ok); }
+    .callout h3 {
+      margin: 0 0 .6rem; font-size: .8rem; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--accent);
+    }
+    .callout.ok h3 { color: var(--ok); }
+    .callout p { margin: 0 0 .7rem; } .callout p:last-child { margin-bottom: 0; }
+
+    /* ---------- Part banners, TOC groups, Part B figures ---------- */
+    nav.toc .toc-label {
+      flex-basis: 100%; text-align: center; font-size: .72rem; font-weight: 600;
+      letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: .6rem;
+    }
+    .part-banner { padding: 4.5rem 0 2.5rem; border-bottom: 1px solid var(--line); }
+    .part-banner .eyebrow { margin-bottom: .5rem; }
+    .part-banner h2 { font-size: clamp(2rem, 4.5vw, 2.8rem); margin-bottom: .8rem; }
+    .part-banner p:not(.eyebrow) { color: var(--muted); font-size: 1.08rem; max-width: 66ch; margin: 0; }
+    .grid.ood { max-width: 620px; }
+    .table-wrap { overflow-x: auto; }
+    table.stats td.cell-sans { font-family: var(--sans); }
+
+    /* ---------- Footer ---------- */
+    footer { text-align: center; padding: 3rem 1.5rem 4rem; color: var(--muted); font-size: .9rem; }
+    footer a { text-decoration: none; }
+    .back { display: inline-block; margin-bottom: 1rem; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <p class="eyebrow">CS180 · Computer Vision · Project 4, Part A</p>
+    <h1>Image Warping and Mosaicing</h1>
+    <p class="lede">Overlapping photos taken from one spot are related by a homography. I recover those homographies from point correspondences, write inverse warping with nearest-neighbor and bilinear sampling from scratch, use it to rectify photos of flat objects, and blend warped photos into seamless mosaics.</p>
+    <p class="byline">By <strong>Yuxiang Liu</strong> · UC Berkeley, Fall 2026</p>
+    <nav class="toc">
+      <a href="#a1">A.1 Pictures</a>
+      <a href="#a2">A.2 Homographies</a>
+      <a href="#a3">A.3 Warping &amp; Rectification</a>
+      <a href="#a4">A.4 Mosaics</a>
+      <a href="#reflection">Reflection</a>
+      <a href="#credits">Image Credits</a>
+    </nav>
+  </header>
+
+  <main>
+    <!-- =================== A.1 =================== -->
+    <section id="a1">
+      <div class="sec-head">
+        <span class="sec-num">A.1</span>
+        <h2>The pictures</h2>
+        <p>Two photos are related by a homography when the camera only rotates about its center of projection, or when the scene is a single plane. I used three sets of overlapping photos of the first kind.</p>
+      </div>
+      <div class="prose">
+        <p>The project allows images from other sources, so all three sets come from public stitching test data (credits <a href="#credits">below</a>). Each was shot by turning the camera from one spot:</p>
+        <ul>
+          <li><strong>St. Petersburg:</strong> a pan across the Neva toward the Peter and Paul Fortress. The originals are 3888&times;2592, which is too large for per-pixel NumPy warps, so I load them at 1/4 scale (972&times;648). Frames 1 and 2 overlap by about 70%.</li>
+          <li><strong>Weir:</strong> a pan across a small weir and sluice gate beside a stone wall, 1333&times;750. Frames 1 and 2 overlap by about 60%, and the wall and balcony visibly change angle between them.</li>
+          <li><strong>Cathedral:</strong> a cathedral nave with the camera tilted up toward the vault, 600&times;768. The frames overlap by about 73% and are exposed very differently, one cool and one warm.</li>
+        </ul>
+        <p>Every image is loaded as a float array of shape (H, W, 3) in [0, 1]. Coordinates are (x, y) = (column, row), with (0, 0) at the <em>center</em> of the top-left pixel.</p>
+      </div>
+      <div class="grid two">
+        <figure><img src="../media/images/proj4/web/a1_stpetersburg_1.jpg" alt="St. Petersburg frame 1: a sailing ship and buildings on the left, the fortress spire on the right" loading="lazy"><figcaption><span class="name">stpetersburg_1</span></figcaption></figure>
+        <figure><img src="../media/images/proj4/web/a1_stpetersburg_2.jpg" alt="St. Petersburg frame 2: the fortress spire centered, a bridge on the right" loading="lazy"><figcaption><span class="name">stpetersburg_2</span></figcaption></figure>
+        <figure><img src="../media/images/proj4/web/a1_weir_1.jpg" alt="Weir frame 1: a stone mill wall with a balcony above a small weir" loading="lazy"><figcaption><span class="name">weir_1</span></figcaption></figure>
+        <figure><img src="../media/images/proj4/web/a1_weir_2.jpg" alt="Weir frame 2: the balcony, a sluice gate and a rocky stream" loading="lazy"><figcaption><span class="name">weir_2</span></figcaption></figure>
+      </div>
+      <div class="grid two narrow">
+        <figure><img src="../media/images/proj4/web/a1_cathedral_1.jpg" alt="Cathedral frame 1: the nave looking toward a stained glass window, in cool light" loading="lazy"><figcaption><span class="name">cathedral_1</span></figcaption></figure>
+        <figure><img src="../media/images/proj4/web/a1_cathedral_2.jpg" alt="Cathedral frame 2: the nave turned to the right, in warmer light" loading="lazy"><figcaption><span class="name">cathedral_2</span></figcaption></figure>
+      </div>
+      <div class="callout">
+        <h3>A pair that wasn't</h3>
+        <p>My original second set was two views of the Pont du Gard aqueduct. When I checked it, sliding one image 429 px sideways matched the other to within about 2% of the intensity range. The two "photos" were crops of a single photo: the transform between them is a pure translation, not a projective one, so I replaced the set. None of the sets above has that problem: no shift lines up their frames.</p>
+      </div>
+    </section>
+
+    <!-- =================== A.2 =================== -->
+    <section id="a2">
+      <div class="sec-head">
+        <span class="sec-num">A.2</span>
+        <h2>Recovering homographies</h2>
+        <p>A homography maps a point (x, y) in one image to (x&prime;, y&prime;) in the other through a 3&times;3 matrix with 8 unknowns.</p>
+      </div>
+      <div class="prose">
+        <p>In homogeneous coordinates, with the bottom-right entry fixed to 1:</p>
+        <div class="eq">w&middot;[x&prime;, y&prime;, 1]<sup>T</sup> = H&middot;[x, y, 1]<sup>T</sup>,&nbsp;&nbsp; H = [[a, b, c], [d, e, f], [g, h, 1]]</div>
+        <p>Dividing out w = gx + hy + 1 and multiplying through by it makes each correspondence give two equations that are <strong>linear</strong> in the unknowns:</p>
+        <div class="eq">[x&nbsp; y&nbsp; 1&nbsp; 0&nbsp; 0&nbsp; 0&nbsp; &minus;x&middot;x&prime;&nbsp; &minus;y&middot;x&prime;] &middot; h = x&prime;<br>[0&nbsp; 0&nbsp; 0&nbsp; x&nbsp; y&nbsp; 1&nbsp; &minus;x&middot;y&prime;&nbsp; &minus;y&middot;y&prime;] &middot; h = y&prime;,&nbsp;&nbsp;&nbsp; h = [a, b, c, d, e, f, g, h]<sup>T</sup></div>
+        <p><code>ComputeH(im1_pts, im2_pts)</code> stacks these rows for n points into a 2n&times;8 matrix A, with the x&prime; equations in the even rows and the y&prime; equations in the odd rows, and b = [x&prime;<sub>0</sub>, y&prime;<sub>0</sub>, x&prime;<sub>1</sub>, y&prime;<sub>1</sub>, &hellip;]. Four points determine H exactly, but clicks are noisy, so I use more and solve the overdetermined system A h = b by least squares (<code>np.linalg.lstsq</code>). On points sent through a made-up H, the function recovers every entry to within 10<sup>&minus;9</sup>.</p>
+        <p>Correspondences were clicked with the course's labeling tool on the original images and saved as JSON. Two details matter when loading them:</p>
+        <ul>
+          <li>The points are in original-resolution pixels, so they are rescaled to the loaded images about pixel edges: x&prime; = (x + 0.5)&middot;s &minus; 0.5.</li>
+          <li>The tool draws image 2 stretched to image 1's size. For two images of different sizes, image 2's points come back scaled by w<sub>1</sub>/w<sub>2</sub> and must be mapped back. I found this when one pair's second-image points landed about 11% off.</li>
+        </ul>
+      </div>
+      <div class="grid narrow">
+        <figure><img src="../media/images/proj4/web/a2_corr_stpetersburg.png" alt="21 numbered correspondences spread across the overlap of the two St. Petersburg frames" loading="lazy"><figcaption><span class="name">St. Petersburg · 21 points</span>Matching points share a color and number.</figcaption></figure>
+        <figure><img src="../media/images/proj4/web/a2_corr_weir.png" alt="9 numbered correspondences on the balcony and sluice gate of the two weir frames" loading="lazy"><figcaption><span class="name">Weir · 9 points</span></figcaption></figure>
+        <figure><img src="../media/images/proj4/web/a2_corr_cathedral.png" alt="7 numbered correspondences on the chandeliers of the two cathedral frames" loading="lazy"><figcaption><span class="name">Cathedral · 7 points</span></figcaption></figure>
+      </div>
+      <div class="prose" style="margin-top:1.6rem">
+        <p>The recovered homographies each map image 1 into image 2's frame. Reprojection error is the distance between a point sent through H and its clicked partner:</p>
+      </div>
+      <div class="table-wrap">
+        <table class="stats">
+          <thead><tr><th>Pair</th><th>Points</th><th>H</th><th>Mean error</th><th>Max error</th></tr></thead>
+          <tbody>
+            <tr><td class="num cell-sans">St. Petersburg 1&rarr;2</td><td class="num">21</td><td class="num">[[1.236, &minus;0.00114, &minus;375.6],<br>&nbsp;[0.0793, 1.145, &minus;41.55],<br>&nbsp;[2.531e&minus;4, &minus;2.003e&minus;5, 1]]</td><td class="num">0.27 px</td><td class="num">0.82 px</td></tr>
+            <tr><td class="num cell-sans">Weir 1&rarr;2</td><td class="num">9</td><td class="num">[[1.090, &minus;0.0609, &minus;639.4],<br>&nbsp;[0.0143, 1.085, 26.66],<br>&nbsp;[&minus;5.285e&minus;6, &minus;1.029e&minus;4, 1]]</td><td class="num">2.19 px</td><td class="num">5.35 px</td></tr>
+            <tr><td class="num cell-sans">Cathedral 1&rarr;2</td><td class="num">7</td><td class="num">[[1.245, &minus;0.1783, &minus;138.3],<br>&nbsp;[0.3506, 1.113, &minus;116.7],<br>&nbsp;[5.112e&minus;4, &minus;8.064e&minus;5, 1]]</td><td class="num">1.09 px</td><td class="num">2.22 px</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout">
+        <h3>Why the points have to spread out</h3>
+        <p>My first St. Petersburg set had 7 accurate clicks, each within about 1 px of the final H. They all sat inside a 40-pixel patch, though. H fit that patch to 0.37 px and was wildly wrong everywhere else: one corner of the image landed about 2,700 px from where it belonged, and the mosaic turned into a stretched wedge with the spire tilted and doubled.</p>
+        <p>I kept those 7 points and added 14 landmarks spread across the overlap: the spire tip and belfry, chimneys, building corners, tree tops, and the spire's and trees' reflections. For each landmark I picked a spot by eye in image 1, then located its match in image 2 by normalized cross-correlation of a small patch. I avoided ice floes, ducks and clouds, which moved between the two shots. Even when each point is left out of the fit, H still predicts it to within about 1 px.</p>
+      </div>
+      <div class="grid two">
+        <figure><img src="../media/images/proj4/web/a2_corr_stpetersburg_clustered.png" alt="The 7 original St. Petersburg correspondences, all bunched in one small spot" loading="lazy"><figcaption><span class="name">The original 7 points</span>All in one 40-pixel patch.</figcaption></figure>
+        <figure><img src="../media/images/proj4/web/a2_stp_clustered_mosaic.jpg" alt="A badly distorted mosaic: one image stretched into a long wedge" loading="lazy"><figcaption><span class="name">Mosaic from those 7 points</span>H fits the patch and extrapolates badly.</figcaption></figure>
+      </div>
+      <p class="note">The cathedral set has the same problem in a milder form. Its 7 points cover only the lower-middle of the frame, and checked against landmarks I did not fit to, H is 1&ndash;3 px off there but 4&ndash;7 px off near the vault.</p>
+    </section>
+
+    <!-- =================== A.3 =================== -->
+    <section id="a3">
+      <div class="sec-head">
+        <span class="sec-num">A.3</span>
+        <h2>Warping and rectification</h2>
+        <p>Both warp functions use inverse warping: every output pixel asks where it came from in the input, so the output has no holes.</p>
+      </div>
+      <div class="prose">
+        <p><code>warpNearestNeighbor(im, H)</code> and <code>warpImageBilinear(im, H)</code> share the same steps:</p>
+        <ul>
+          <li><strong>Canvas.</strong> Send the image's four corners through H. Their bounding box (x<sub>min</sub>, y<sub>min</sub>)&ndash;(x<sub>max</sub>, y<sub>max</sub>) is the output size, and it can start at negative coordinates.</li>
+          <li><strong>Inverse map.</strong> List the center of every output pixel in the output frame, multiply by H<sup>&minus;1</sup>, and divide by w. That gives each one's source position (x, y) in the input, usually between pixels.</li>
+          <li><strong>Sample</strong> the input at (x, y). This is the only step that differs between the two methods.</li>
+          <li><strong>Return</strong> an RGBA image whose alpha is 0 wherever the source position falls outside the input, plus the offset (x<sub>min</sub>, y<sub>min</sub>) that places the result in the output frame. Mosaicing uses both.</li>
+        </ul>
+        <p><strong>Nearest neighbor</strong> rounds (x, y) to the closest pixel center and copies it. <strong>Bilinear</strong> takes the four surrounding pixels and blends them by distance, with a = x &minus; &lfloor;x&rfloor; and b = y &minus; &lfloor;y&rfloor;:</p>
+        <div class="eq">top = (1 &minus; a)&middot;I<sub>TL</sub> + a&middot;I<sub>TR</sub>,&nbsp;&nbsp; bottom = (1 &minus; a)&middot;I<sub>BL</sub> + a&middot;I<sub>BR</sub>,&nbsp;&nbsp; value = (1 &minus; b)&middot;top + b&middot;bottom</div>
+        <p>On the last row and column the top-left neighbor is clamped one pixel in, so a point exactly on the image edge still has four neighbors. To check the code, I confirmed that the identity and integer shifts reproduce the input exactly and that bilinear sampling reproduces a linear brightness ramp to 10<sup>&minus;15</sup>. Nearest neighbor also matched OpenCV's <code>warpPerspective</code> pixel for pixel; I used OpenCV only for this test, never in the project code.</p>
+      </div>
+
+      <div class="sub">
+        <span class="sec-num">Rectification</span>
+        <h3 class="subh">Making a flat object face the camera</h3>
+        <div class="prose">
+          <p>If four points in a photo are the corners of a real rectangle, the homography that sends them to an axis-aligned rectangle undoes the perspective of the whole plane they lie on. I rectified two photos this way, with corners in top-left, top-right, bottom-right, bottom-left order:</p>
+          <ul>
+            <li><strong>Chessboard &rarr; 800&times;800 square.</strong> The corners are the inner edge of the 8&times;8 playing area, located on zoomed-in views.</li>
+            <li><strong>Gallery wall &rarr; 680&times;400.</strong> The target is a 4&times;2 block of portraits in a long gallery. I found the corners by fitting straight lines to the gold rails and frame strips and intersecting them. As a sanity check, the two rails meet at (679, 436), the corridor's vanishing point. I gave each portrait a width-to-height ratio of 0.85, the proportion at which the faces look natural, so the block is 4&times;0.85 : 2 = 1.7.</li>
+          </ul>
+          <p>Before warping, the gallery photo is cropped to its left part (yellow box). The wall's vanishing line runs vertically through x &asymp; 679, and points on it map to infinity, so warping the whole photo would ask for an infinite canvas.</p>
+        </div>
+        <div class="grid three">
+          <figure><img src="../media/images/proj4/web/a3_chessboard_quad.jpg" alt="Chessboard photographed at an angle, with the playing area outlined in green" loading="lazy"><figcaption><span class="name">Chessboard · input</span>Green: the four corners mapped to the square.</figcaption></figure>
+          <figure><img src="../media/images/proj4/web/a3_chessboard_nearest.jpg" alt="Rectified chessboard, nearest neighbor: square board seen from above, pieces stretched upward" loading="lazy"><figcaption><span class="name">Rectified · nearest neighbor</span></figcaption></figure>
+          <figure><img src="../media/images/proj4/web/a3_chessboard_bilinear.jpg" alt="Rectified chessboard, bilinear" loading="lazy"><figcaption><span class="name">Rectified · bilinear</span>Every square is square. The pieces stretch because they stand off the board's plane.</figcaption></figure>
+          <figure><img src="../media/images/proj4/web/a3_gallery_quad.jpg" alt="A long gallery lined with portraits; a block of portraits on the left wall is outlined in green" loading="lazy"><figcaption><span class="name">Gallery · input</span>Green: the 4&times;2 portrait block. Yellow: the crop that gets warped.</figcaption></figure>
+          <figure><img src="../media/images/proj4/web/a3_gallery_nearest.jpg" alt="Rectified portrait wall, nearest neighbor: eight portraits seen face-on" loading="lazy"><figcaption><span class="name">Rectified · nearest neighbor</span></figcaption></figure>
+          <figure><img src="../media/images/proj4/web/a3_gallery_bilinear.jpg" alt="Rectified portrait wall, bilinear" loading="lazy"><figcaption><span class="name">Rectified · bilinear</span>The receding wall now faces the camera.</figcaption></figure>
+        </div>
+
+        <h4 class="case">Nearest neighbor vs. bilinear</h4>
+        <div class="prose">
+          <p>The difference shows wherever the warp magnifies the source. The far end of the portrait block is about 30 px wide in the photo and 170 px in the output, more than 5&times; larger:</p>
+        </div>
+        <div class="grid two narrow">
+          <figure><img src="../media/images/proj4/web/a3_gallery_zoom_nearest.png" alt="Zoomed portrait from the far end of the wall, nearest neighbor: visible blocks and jagged frame edges" loading="lazy"><figcaption><span class="name">Far-end portrait · nearest neighbor</span>Each source pixel becomes a visible block, and the frame edges step.</figcaption></figure>
+          <figure><img src="../media/images/proj4/web/a3_gallery_zoom_bilinear.png" alt="The same zoomed portrait, bilinear: smooth but soft" loading="lazy"><figcaption><span class="name">Far-end portrait · bilinear</span>Smooth shading and straight edges, but soft: no sampling method can add detail the photo never had.</figcaption></figure>
+          <figure><img src="../media/images/proj4/web/a3_weir_zoom_nearest.png" alt="Zoomed balcony railing from the weir warp, nearest neighbor: jagged bars" loading="lazy"><figcaption><span class="name">Weir balcony · nearest neighbor</span>At a mild 1.1&times; scale the thin railing bars still jitter and break.</figcaption></figure>
+          <figure><img src="../media/images/proj4/web/a3_weir_zoom_bilinear.png" alt="Zoomed balcony railing, bilinear: even bars" loading="lazy"><figcaption><span class="name">Weir balcony · bilinear</span>Even bars.</figcaption></figure>
+        </div>
+        <div class="table-wrap">
+          <table class="stats">
+            <thead><tr><th>Warp</th><th>Output size</th><th>Nearest neighbor</th><th>Bilinear</th><th>Ratio</th></tr></thead>
+            <tbody>
+              <tr><td class="num cell-sans">weir_1 &rarr; weir_2 frame</td><td class="num">1582&times;912</td><td class="num">0.13 s</td><td class="num">0.28 s</td><td class="num">2.2&times;</td></tr>
+              <tr><td class="num cell-sans">Chessboard</td><td class="num">1391&times;1190</td><td class="num">0.14 s</td><td class="num">0.33 s</td><td class="num">2.4&times;</td></tr>
+              <tr><td class="num cell-sans">Gallery crop</td><td class="num">2602&times;1927</td><td class="num">0.43 s</td><td class="num">0.65 s</td><td class="num">1.5&times;</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout">
+          <h3>Speed vs. quality</h3>
+          <p>Nearest neighbor does one lookup per pixel; bilinear does four plus the blending arithmetic. That makes it 1.5&ndash;2.4&times; slower here (median of 3 runs, Python 3.8 and NumPy on my laptop). The gap is smaller on the gallery, where about a third of the canvas is empty: those pixels still go through the shared inverse mapping but skip sampling.</p>
+          <p>In exchange, bilinear removes blockiness under magnification and jagged edges on thin diagonal lines. Its only cost in quality is a slight softening, since averaging four pixels is a mild blur. For mosaics, where seams and edges need to line up, I use bilinear.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- =================== A.4 =================== -->
+    <section id="a4">
+      <div class="sec-head">
+        <span class="sec-num">A.4</span>
+        <h2>Blending the mosaics</h2>
+        <p>Each mosaic keeps image 2 unwarped, warps image 1 into its frame, and blends the two where they overlap.</p>
+      </div>
+      <div class="prose">
+        <p><code>mossaic(im1, im2, H)</code> works in four steps:</p>
+        <ul>
+          <li><strong>Warp.</strong> Run <code>warpImageBilinear(im1, H)</code>, which returns the warped image and its offset (x<sub>min</sub>, y<sub>min</sub>) in image 2's frame.</li>
+          <li><strong>Canvas.</strong> The canvas's top-left corner is (min(x<sub>min</sub>, 0), min(y<sub>min</sub>, 0)), so it covers both images even when the warped one sticks out to the left or top. For the weir it begins 743 px left of image 2. Each image goes on its own canvas-sized layer with an alpha mask.</li>
+          <li><strong>Feather weights.</strong> Each layer's weight is its distance to the nearest empty pixel, computed with <code>distance_transform_edt</code>, the SciPy equivalent of MATLAB's <code>bwdist</code>. The mask is padded with one ring of zeros first, so an image edge on the canvas border still counts as an edge. Weights are 0 outside the image and rise linearly toward its middle.</li>
+          <li><strong>Blend.</strong> Plain feathering takes (w<sub>1</sub>&middot;I<sub>1</sub> + w<sub>2</sub>&middot;I<sub>2</sub>) / (w<sub>1</sub> + w<sub>2</sub>), so the mix slides from one image to the other across the overlap instead of switching at a hard seam.</li>
+        </ul>
+      </div>
+      <div class="grid">
+        <figure><img src="../media/images/proj4/web/a4_weir_weights.png" alt="Three grayscale maps: tent-shaped weights for each weir image, and the share of image 1, which fades across the overlap with diagonal creases" loading="lazy"><figcaption><span class="name">Feather weights for the weir mosaic</span>Each weight is shown scaled to its maximum. The share of image 1 fades smoothly across the overlap, but it has diagonal creases where the nearest edge switches. Those creases are the "wedge" artifacts plain feathering can show.</figcaption></figure>
+      </div>
+      <div class="prose" style="margin-top:1.6rem">
+        <p>Plain feathering also averages fine detail. Where the images are misaligned by a few pixels, each edge appears twice at half strength, which is <strong>ghosting</strong>. So I blend in two frequency bands, a 2-level Laplacian pyramid:</p>
+        <div class="eq">low<sub>i</sub> = G<sub>&sigma;</sub>(I<sub>i</sub>&middot;&alpha;<sub>i</sub>) / G<sub>&sigma;</sub>(&alpha;<sub>i</sub>),&nbsp;&nbsp; high<sub>i</sub> = I<sub>i</sub> &minus; low<sub>i</sub>,&nbsp;&nbsp; &sigma; = 5<br>result = (w<sub>1</sub>&middot;low<sub>1</sub> + w<sub>2</sub>&middot;low<sub>2</sub>) / (w<sub>1</sub> + w<sub>2</sub>) &nbsp;+&nbsp; (high<sub>1</sub> if w<sub>1</sub> &ge; w<sub>2</sub> else high<sub>2</sub>)</div>
+        <p>Brightness and color (the low band) still fade smoothly across the overlap. Detail (the high band) comes from one image only, so every edge appears once. Dividing by the blurred alpha averages only over pixels that have data, which keeps the empty canvas from darkening each image's edges. Where only one image has data, the two bands add back to exactly that image.</p>
+      </div>
+      <div class="grid two narrow">
+        <figure><img src="../media/images/proj4/web/a4_weir_zoom_feather.png" alt="Zoomed balcony from the weir mosaic with plain feathering: the chairs behind the railing appear doubled" loading="lazy"><figcaption><span class="name">Plain feathering</span>The chairs behind the railing are doubled: they stand off the wall, and the alignment there is a few pixels off.</figcaption></figure>
+        <figure><img src="../media/images/proj4/web/a4_weir_zoom_twoband.png" alt="The same zoom with two-band blending: chairs and railing appear once" loading="lazy"><figcaption><span class="name">Two-band blending</span>One copy of each edge.</figcaption></figure>
+      </div>
+
+      <h4 class="case">St. Petersburg</h4>
+      <div class="grid">
+        <figure><img src="../media/images/proj4/web/a4_stpetersburg_mosaic.jpg" alt="Panorama of the Neva: sailing ship and buildings on the left, the fortress spire, and a bridge on the right, reflected in still water" loading="lazy"><figcaption><span class="name">stpetersburg_1 + stpetersburg_2 · 1354&times;752</span>The spire appears once, and the sky and water show no seam. With 21 well-spread points, this is the best-aligned of the three.</figcaption></figure>
+      </div>
+      <h4 class="case">Weir</h4>
+      <div class="grid">
+        <figure><img src="../media/images/proj4/web/a4_weir_mosaic.jpg" alt="Wide mosaic of the mill race: the stone wall on the left, the balcony and sluice gate, and the rocky stream on the right" loading="lazy"><figcaption><span class="name">weir_1 + weir_2 · 2076&times;938</span>The balcony, gate beam and stairs line up, and the two exposures blend smoothly. All 9 points are in the top third of the frame, and the water moved between shots, so the stream at the bottom is the softest part.</figcaption></figure>
+      </div>
+      <h4 class="case">Cathedral</h4>
+      <div class="grid narrow">
+        <figure><img src="../media/images/proj4/web/a4_cathedral_mosaic.jpg" alt="Mosaic of the cathedral nave; the left image is rotated by the warp" loading="lazy"><figcaption><span class="name">cathedral_1 + cathedral_2 · 894&times;904</span>The window, chandeliers and far door each appear once, and the cool and warm exposures fade into each other. The warped left image is tilted because the camera points up at the vault while it turns. Near the vault, H is 4&ndash;7 px off, which the two-band blend mostly hides.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- =================== Reflection =================== -->
+    <section id="reflection">
+      <div class="sec-head">
+        <span class="sec-num">Reflection</span>
+        <h2>What I took away</h2>
+      </div>
+      <div class="prose">
+        <p>The most useful lesson was that a small reprojection error does not mean a good homography. Seven accurate points in one corner fit to a third of a pixel and still produced a wedge. What H needs is points that pin down the plane everywhere the image goes, which means spreading them across the whole overlap and checking each one against a fit that leaves it out.</p>
+        <p>The rest came down to coordinate bookkeeping: (x, y) vs. (row, column), pixel centers vs. pixel edges, rescaled clicks, which way H points, and a canvas whose origin is negative. Every one of those mistakes runs without an error and quietly produces a shifted or stretched picture. Splitting the blend into frequency bands was the step that turned visible seams and ghosts into mosaics that read as single photos.</p>
+      </div>
+    </section>
+
+    <!-- =================== Credits =================== -->
+    <section id="credits">
+      <div class="sec-head">
+        <span class="sec-num">Image Credits</span>
+        <h2>Sources</h2>
+      </div>
+      <div class="prose">
+        <ul>
+          <li><strong>St. Petersburg</strong> (boat1&ndash;2) and <strong>cathedral</strong> (a2&ndash;a3): <a href="https://github.com/opencv/opencv_extra/tree/4.x/testdata/stitching">OpenCV stitching test data</a>.</li>
+          <li><strong>Weir</strong> (weir_1&ndash;2): <a href="https://github.com/OpenStitching/stitching_tutorial/tree/master/imgs">OpenStitching tutorial images</a>.</li>
+          <li><strong>Chessboard:</strong> "Chess game Staunton No. 6 perfil view 8" by Wilfredor, <a href="https://commons.wikimedia.org/wiki/File:Chess_game_Staunton_No._6_perfil_view_8.jpg">Wikimedia Commons</a>, CC0.</li>
+          <li><strong>Gallery:</strong> "Ch&acirc;teau de Beauregard, perspective de la Galerie des Illustres" by Rolf Kranz, <a href="https://commons.wikimedia.org/wiki/File:Ch%C3%A2teau_de_Beauregard,_perspective_de_la_Galerie_des_Illustres.jpg">Wikimedia Commons</a>, <a href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a>. The rectified versions on this page are shared under the same license.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a class="back" href="../index.html">&larr; Back to portfolio</a>
+    <p>CS180: Intro to Computer Vision &amp; Computational Photography · Fall 2026</p>
+  </footer>
+</body>
+</html>
