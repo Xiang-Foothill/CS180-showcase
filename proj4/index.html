@@ -194,21 +194,34 @@
 </head>
 <body>
   <header class="hero">
-    <p class="eyebrow">CS180 · Computer Vision · Project 4, Part A</p>
+    <p class="eyebrow">CS180 · Computer Vision · Project 4, Parts A &amp; B</p>
     <h1>Image Warping and Mosaicing</h1>
-    <p class="lede">Overlapping photos taken from one spot are related by a homography. I recover those homographies from point correspondences, write inverse warping with nearest-neighbor and bilinear sampling from scratch, use it to rectify photos of flat objects, and blend warped photos into seamless mosaics.</p>
+    <p class="lede">Overlapping photos taken from one spot are related by a homography. In Part A I recover homographies from hand-clicked correspondences, write inverse warping from scratch, rectify flat objects and blend seamless mosaics. In Part B the computer finds the correspondences itself: Harris corners, feature descriptors, ratio-test matching and RANSAC.</p>
     <p class="byline">By <strong>Yuxiang Liu</strong> · UC Berkeley, Fall 2026</p>
     <nav class="toc">
+      <span class="toc-label">Part A · Manual mosaics</span>
       <a href="#a1">A.1 Pictures</a>
       <a href="#a2">A.2 Homographies</a>
       <a href="#a3">A.3 Warping &amp; Rectification</a>
       <a href="#a4">A.4 Mosaics</a>
+      <span class="toc-label">Part B · Automatic stitching</span>
+      <a href="#b1">B.1 Corners &amp; ANMS</a>
+      <a href="#b2">B.2 Descriptors</a>
+      <a href="#b3">B.3 Matching</a>
+      <a href="#b4">B.4 RANSAC &amp; Mosaics</a>
+      <span class="toc-label">&nbsp;</span>
       <a href="#reflection">Reflection</a>
       <a href="#credits">Image Credits</a>
     </nav>
   </header>
 
   <main>
+    <div class="part-banner" id="parta">
+      <p class="eyebrow">Part A</p>
+      <h2>Mosaics from hand-clicked points</h2>
+      <p>Homographies from correspondences I click by hand, then warping, rectification and blending, all written from scratch.</p>
+    </div>
+
     <!-- =================== A.1 =================== -->
     <section id="a1">
       <div class="sec-head">
@@ -401,6 +414,128 @@
       </div>
     </section>
 
+    <!-- =================== PART B =================== -->
+    <div class="part-banner" id="partb">
+      <p class="eyebrow">Part B</p>
+      <h2>Feature matching for autostitching</h2>
+      <p>Clicking correspondences is slow and, as Part A showed, easy to get wrong. Here the program finds them itself, following Brown et al., <em>Multi-Image Matching using Multi-Scale Oriented Patches</em>, with the project's simplifications: single scale, no sub-pixel refinement, no rotation invariance. The warping and blending are Part A's code, unchanged.</p>
+    </div>
+
+    <!-- =================== B.1 =================== -->
+    <section id="b1">
+      <div class="sec-head">
+        <span class="sec-num">B.1</span>
+        <h2>Harris corners and ANMS</h2>
+        <p>Find points that can be located precisely, then keep a set of them that is both strong and spread over the whole frame.</p>
+      </div>
+      <div class="prose">
+        <p>The Harris detector (the course's sample code) builds the second-moment matrix M of the image gradients in a Gaussian window (&sigma; = 1) around each pixel. Its corner strength is the harmonic mean of M's eigenvalues, the measure the paper uses:</p>
+        <div class="eq">f<sub>HM</sub> = det M / tr M = &lambda;<sub>1</sub>&lambda;<sub>2</sub> / (&lambda;<sub>1</sub> + &lambda;<sub>2</sub>)</div>
+        <p>f is large only where the gradients are strong in two directions, which is a corner. On edges and flat areas it is near zero. Every 3&times;3 local maximum of f at least 20 px from the border is a candidate. The border margin is there so that B.2's 40&times;40 window fits inside the image.</p>
+        <p>On weir_2 that gives <strong>23,349 candidates</strong>, one every 6.5 px. Most of the scene is texture (stone, leaves, rippling water), and Harris responds to all of it. Keeping only the 500 strongest does not fix this, because strong corners cluster. One ninth of the frame, the sunlit wall and the balcony bracket, holds 211 of those 500 (42%). The whole bottom third holds 20.</p>
+        <p><strong>Adaptive Non-Maximal Suppression</strong> fixes the spread. Each corner gets a suppression radius: the distance to the nearest corner that is clearly stronger than it.</p>
+        <div class="eq">r<sub>i</sub> = min<sub>j</sub> &Vert;x<sub>i</sub> &minus; x<sub>j</sub>&Vert;&nbsp;&nbsp; subject to&nbsp;&nbsp; f(x<sub>i</sub>) &lt; c<sub>robust</sub>&middot;f(x<sub>j</sub>),&nbsp;&nbsp; c<sub>robust</sub> = 0.9</div>
+        <p>The 500 corners with the largest radii are kept. The strongest corner has r = &infin;. A weaker corner survives if nothing much stronger is nearby, so quiet areas keep their best points too. I compute all radii at once with the pairwise-distance helper <code>dist2</code> and a mask for the strength condition. To keep that n&times;n matrix small, ANMS runs on the 2000 strongest candidates, which takes 0.03 s. The 500 survivors are at least 17 px apart, and each ninth of the frame now holds between 35 and 76 of them.</p>
+      </div>
+      <div class="grid three">
+        <figure><img src="../media/images/proj4/web/b1_corners_all.jpg" alt="weir_2 covered almost solidly by tiny red dots" loading="lazy"><figcaption><span class="name">All candidates · 23,349</span>Every local maximum of f. The red covers almost everything except the blown-out white wall, where the image is flat.</figcaption></figure>
+        <figure><img src="../media/images/proj4/web/b1_corners_strongest.jpg" alt="500 red dots bunched on the balcony bracket, the sunlit wall and the bushes, with almost none on the stream" loading="lazy"><figcaption><span class="name">No ANMS: strongest 500</span>Bunched on the high-contrast balcony bracket and bushes. The stream and the gate get almost none.</figcaption></figure>
+        <figure><img src="../media/images/proj4/web/b1_corners_anms.jpg" alt="500 cyan dots spread evenly across wall, balcony, gate, trees and stream" loading="lazy"><figcaption><span class="name">ANMS · 500</span>The same number of points, spread over the whole frame.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- =================== B.2 =================== -->
+    <section id="b2">
+      <div class="sec-head">
+        <span class="sec-num">B.2</span>
+        <h2>Feature descriptors</h2>
+        <p>Describe the neighborhood of each corner so the same point can be recognized in the other photo.</p>
+      </div>
+      <div class="prose">
+        <p>For each corner I take the 40&times;40 grayscale window around it and shrink it to 8&times;8 by averaging each 5&times;5 block. The averaging blurs and subsamples in one step. That makes the descriptor insensitive to the one or two pixels of error in a corner's position, and it prevents aliasing. Then I apply bias/gain normalization, subtracting the mean and dividing by the standard deviation, so the descriptor ignores brightness and contrast. This matters here, because the weir and cathedral pairs are exposed differently. Each feature becomes a 64-dimensional vector with mean 0 and standard deviation 1.</p>
+        <p>As the project allows, the windows are axis-aligned (no rotation invariance) and there is no wavelet step. All windows are cut in one indexing operation: an offset grid of &minus;20&hellip;19 broadcast against every corner's (row, column) gives an (n, 40, 40) array.</p>
+      </div>
+      <div class="grid two">
+        <figure><img src="../media/images/proj4/web/b2_locations.jpg" alt="weir_2 with six numbered yellow squares marking 40 by 40 windows around ANMS corners" loading="lazy"><figcaption><span class="name">Six ANMS corners on weir_2</span>Yellow squares: the 40&times;40 windows.</figcaption></figure>
+        <figure><img src="../media/images/proj4/web/b2_descriptors.png" alt="Six 40 by 40 grayscale windows above their 8 by 8 normalized descriptors" loading="lazy"><figcaption><span class="name">Windows and their descriptors</span>Top: each window. Bottom: its normalized 8&times;8 descriptor. The coarse layout survives (the gate post in 2, the railing cross in 6), and fine texture is averaged away.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- =================== B.3 =================== -->
+    <section id="b3">
+      <div class="sec-head">
+        <span class="sec-num">B.3</span>
+        <h2>Feature matching</h2>
+        <p>Pair each feature in image 1 with its most similar feature in image 2, and keep only the pairs that are unambiguous.</p>
+      </div>
+      <div class="prose">
+        <p>For each image-1 descriptor I compute its squared distance (SSD) to every image-2 descriptor, and look at the nearest (e<sub>1-NN</sub>) and second-nearest (e<sub>2-NN</sub>). How close the nearest one is says little on its own. Repetitive scenes (railings, ribbed vaults) produce close matches that are wrong. What separates good matches is <strong>Lowe's ratio test</strong>: a correct match should be much closer than any alternative.</p>
+        <div class="eq">keep the match if&nbsp; e<sub>1-NN</sub> / e<sub>2-NN</sub> &lt; 0.5&nbsp;&nbsp; (both squared distances)</div>
+        <p>To choose the threshold I reproduced the paper's Figure 6b on my own data. I took every image-1 feature in the three pairs (1500 in all) and its nearest neighbor. Each pair counts as <em>correct</em> if the final RANSAC homography from B.4 maps one point to within 3 px of the other. As in the paper, incorrect matches pile up near a ratio of 1, while correct ones spread over low ratios. A threshold of 0.5 keeps 73% of the correct matches and only 4.5% of the incorrect ones, so 86% of the surviving matches are correct. Pushing it higher brings in incorrect matches much faster than correct ones.</p>
+      </div>
+      <div class="grid narrow">
+        <figure><img src="../media/images/proj4/web/b3_ratio_hist.png" alt="Histogram: green correct matches spread from 0 to 0.6, red incorrect matches rising steeply toward 1, dashed line at 0.5" loading="lazy"><figcaption><span class="name">Ratio of nearest to second-nearest distance</span>All three pairs, 1500 features. Labels come from the final homography.</figcaption></figure>
+      </div>
+      <div class="prose" style="margin-top:1.6rem">
+        <p>The matches that pass the ratio test are shown below, colored by what RANSAC decides in B.4: green if consistent with the homography, red if rejected. Most of the red lines are clearly wrong. In the cathedral, most of them connect different ribs of the repeating ceiling vault.</p>
+      </div>
+      <div class="grid">
+        <figure><img src="../media/images/proj4/web/b3_matches_stpetersburg.jpg" alt="Two St. Petersburg frames side by side joined by many parallel green lines and a few red ones" loading="lazy"><figcaption><span class="name">St. Petersburg · 179 matches, 154 inliers</span></figcaption></figure>
+        <figure><img src="../media/images/proj4/web/b3_matches_weir.jpg" alt="Two weir frames joined by parallel green lines on the balcony and gate, and a few red lines" loading="lazy"><figcaption><span class="name">Weir · 82 matches, 74 inliers</span>Red outliers include one from the stone wall to the trees.</figcaption></figure>
+        <figure><img src="../media/images/proj4/web/b3_matches_cathedral.jpg" alt="Two cathedral frames joined by green lines on chandeliers and pews, with red lines among the ceiling ribs" loading="lazy"><figcaption><span class="name">Cathedral · 88 matches, 74 inliers</span>Most outliers are in the repeating rib vault.</figcaption></figure>
+      </div>
+    </section>
+
+    <!-- =================== B.4 =================== -->
+    <section id="b4">
+      <div class="sec-head">
+        <span class="sec-num">B.4</span>
+        <h2>RANSAC and automatic mosaics</h2>
+        <p>Least squares on all matches would let the remaining outliers drag H around. RANSAC finds the homography most matches agree on.</p>
+      </div>
+      <div class="prose">
+        <p>My 4-point RANSAC, written from scratch:</p>
+        <ul>
+          <li>Pick 4 distinct matches at random and solve for H exactly with Part A's <code>ComputeH</code>.</li>
+          <li>Map every image-1 point through H, divide by w, and count as <strong>inliers</strong> the matches that land within &epsilon; = 3 px of their partner.</li>
+          <li>Repeat 500 times and keep the largest inlier set.</li>
+          <li>Refit H by least squares on <strong>all</strong> those inliers. The 4-point H is only as accurate as its 4 points, so the refit averages out their error.</li>
+        </ul>
+        <p>Corners are located only to the nearest pixel, so even correct matches are off by about a pixel, and a 4-point fit adds error on top. With &epsilon; = 1 px only 38 of the 82 weir matches count as inliers. At 2 px it's 63, at 3 px 74, and at 5 px 79. The count levels off at 3 px, which keeps the good matches and still rejects the obvious outliers. A fixed random seed makes results repeatable.</p>
+        <p>The resulting H maps image 1 into image 2's frame, the same direction as in Part A, so <code>mossaic</code> takes it unchanged. Every number below comes from running the whole pipeline (Harris, ANMS, descriptors, matching, RANSAC), which takes 0.15&ndash;0.2 s per pair.</p>
+      </div>
+      <div class="table-wrap">
+        <table class="stats">
+          <thead><tr><th>Pair</th><th>Matches</th><th>Inliers</th><th>Inlier residual</th><th>Auto H on my clicks<br>(mean / max)</th><th>Overlap error<br>manual &rarr; auto</th></tr></thead>
+          <tbody>
+            <tr><td class="num cell-sans">St. Petersburg 1&rarr;2</td><td class="num">179</td><td class="num">154</td><td class="num">0.68 px</td><td class="num">0.31 / 1.01 px</td><td class="num">17.0 &rarr; 17.0</td></tr>
+            <tr><td class="num cell-sans">Weir 1&rarr;2</td><td class="num">82</td><td class="num">74</td><td class="num">1.16 px</td><td class="num">2.71 / 7.11 px</td><td class="num">41.0 &rarr; 37.2</td></tr>
+            <tr><td class="num cell-sans">Cathedral 1&rarr;2</td><td class="num">88</td><td class="num">74</td><td class="num">1.08 px</td><td class="num">1.69 / 3.39 px</td><td class="num">12.9 &rarr; 10.3</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note"><em>Auto H on my clicks</em> applies the automatic homography to the Part A hand-clicked points, which it never saw, and measures how far each lands from its partner. <em>Overlap error</em> is the mean absolute grayscale difference (0&ndash;255) between warped image 1 and image 2 where they overlap. It includes the exposure difference between the shots, so compare the two numbers in a row, not across rows.</p>
+      <div class="prose" style="margin-top:1.6rem">
+        <p>The automatic homographies agree with my clicks about as well as clicks agree with themselves. For St. Petersburg, where I clicked 21 well-spread points, the two are equivalent. For the weir and the cathedral, the automatic H aligns the overlap slightly better than the manual one. My 9 weir clicks were all in the top third of the frame and my 7 cathedral clicks in its lower middle, while the RANSAC inliers cover the whole overlap. This is the same lesson as Part A: spread matters more than count.</p>
+      </div>
+
+      <h4 class="case">St. Petersburg</h4>
+      <div class="grid two">
+        <figure><img src="../media/images/proj4/web/b4_stpetersburg_manual.jpg" alt="St. Petersburg panorama stitched from hand-clicked points" loading="lazy"><figcaption><span class="name">Manual · 21 clicked points</span></figcaption></figure>
+        <figure><img src="../media/images/proj4/web/b4_stpetersburg_auto.jpg" alt="St. Petersburg panorama stitched automatically, indistinguishable from the manual one" loading="lazy"><figcaption><span class="name">Automatic · 154 inliers · 1357&times;752</span>Indistinguishable from the manual mosaic: the spire, ship and clouds appear once.</figcaption></figure>
+      </div>
+      <h4 class="case">Weir</h4>
+      <div class="grid two">
+        <figure><img src="../media/images/proj4/web/b4_weir_manual.jpg" alt="Weir mosaic stitched from hand-clicked points" loading="lazy"><figcaption><span class="name">Manual · 9 clicked points</span></figcaption></figure>
+        <figure><img src="../media/images/proj4/web/b4_weir_auto.jpg" alt="Weir mosaic stitched automatically" loading="lazy"><figcaption><span class="name">Automatic · 74 inliers · 2110&times;932</span>The balcony, gate and stairs line up. With inliers on the stream as well, the bottom of the overlap aligns better than with my top-heavy clicks.</figcaption></figure>
+      </div>
+      <h4 class="case">Cathedral</h4>
+      <div class="grid two narrow">
+        <figure><img src="../media/images/proj4/web/b4_cathedral_manual.jpg" alt="Cathedral mosaic stitched from hand-clicked points" loading="lazy"><figcaption><span class="name">Manual · 7 clicked points</span></figcaption></figure>
+        <figure><img src="../media/images/proj4/web/b4_cathedral_auto.jpg" alt="Cathedral mosaic stitched automatically" loading="lazy"><figcaption><span class="name">Automatic · 74 inliers · 894&times;916</span>Inliers reach the chandeliers, pews and upper arches, not just the lower middle where I clicked.</figcaption></figure>
+      </div>
+    </section>
+
     <!-- =================== Reflection =================== -->
     <section id="reflection">
       <div class="sec-head">
@@ -410,6 +545,7 @@
       <div class="prose">
         <p>The most useful lesson was that a small reprojection error does not mean a good homography. Seven accurate points in one corner fit to a third of a pixel and still produced a wedge. What H needs is points that pin down the plane everywhere the image goes, which means spreading them across the whole overlap and checking each one against a fit that leaves it out.</p>
         <p>The rest came down to coordinate bookkeeping: (x, y) vs. (row, column), pixel centers vs. pixel edges, rescaled clicks, which way H points, and a canvas whose origin is negative. Every one of those mistakes runs without an error and quietly produces a shifted or stretched picture. Splitting the blend into frequency bands was the step that turned visible seams and ghosts into mosaics that read as single photos.</p>
+        <p>In Part B the striking thing was how weak each individual step is, and how well they work together. Harris fires on 23,000 points, most of them texture. Nearest-neighbor matching on its own is wrong more often than right: 1088 of the 1500 nearest neighbors are incorrect. The ratio test throws out most of the wrong ones, and RANSAC removes the rest, because outliers almost never agree on a single homography. The result matches my hand-clicked homographies to within a few pixels, and in 0.2 s instead of the time it took me to click.</p>
       </div>
     </section>
 
